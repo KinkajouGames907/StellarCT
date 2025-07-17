@@ -1,0 +1,419 @@
+/* MOBILE-FIRST COMPLETE OVERRIDE */
+/* This file fixes all mobile issues by starting fresh */
+
+@media (max-width: 768px) {
+    /* RESET EVERYTHING FOR MOBILE */
+    * {
+        box-sizing: border-box !important;
+        -webkit-tap-highlight-color: transparent !important;
+        -webkit-touch-callout: none !important;
+        -webkit-user-select: none !important;
+        user-select: none !important;
+    }
+
+    /* BODY AND VIEWPORT */
+    html, body {
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow-x: hidden !important;
+        position: relative !important;
+        background: #0a0a0f !important;
+        color: white !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        font-size: 16px !important;
+        line-height: 1.4 !important;
+    }
+
+    /* AUTH CONTAINER - COMPLETE OVERRIDE */
+    .auth-container {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: linear-gradient(135deg, #0c0c1e 0%, #1a1a2e 50%, #16213e 100%) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 20px !important;
+        z-index: 9999 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    /* AUTH CARD - SIMPLE AND CLEAN */
+    .auth-card {
+        width: 100% !important;
+        max-width: 320px !important;
+        background: rgba(26, 26, 46, 0.95) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 16px !important;
+        padding: 30px 20px !important;
+        margin: 0 auto !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+        backdrop-filter: none !important;
+        animation: none !important;
+        transform: none !important;
+        position: relative !important;
+    }
+
+    /* LOGO AND HEADER */
+    .stellar-logo {
+        font-size: 2rem !important;
+        font-weight: bold !important;
+        text-align: center !important;
+        margin-bottom: 10px !important;
+        background: linear-gradient(45deg, #667eea, #764ba2) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+    }
+
+    .auth-subtitle {
+        text-align: center !important;
+        color: rgba(255, 255, 255, 0.7) !important;
+        font-size: 14px !important;
+        margin-bottom: 30px !important;
+    }
+
+    /* AUTH FORMS */
+    .auth-forms {
+        height: auto !important;
+        position: relative !important;
+    }
+
+    .auth-form {
+        position: relative !important;
+        opacity: 1 !important;
+        transform: none !important;
+        display: block !important;
+    }
+
+    .auth-form.hidden {
+        display: none !important;
+    }
+
+    /* BUTTONS - CRITICAL FIX */
+    button, .btn, .google-btn, .auth-btn, input[type="button"], input[type="submit"] {
+        width: 100% !important;
+        min-height: 50px !important;
+        padding: 15px 20px !important;
+        margin: 10px 0 !important;
+        border: none !important;
+        border-radius: 12px !important;
+        font-size: 16px !important;
+        font-weight: 500 !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 10px !important;
+        text-decoration: none !important;
+        outline: none !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
+        touch-action: manipulation !important;
+        -webkit-tap-highlight-color: transparent !important;
+        position: relative !important;
+        z-index: 10 !important;
+    }
+
+    /* GOOGLE BUTTON SPECIFIC */
+    .google-btn, button[onclick*="signInWithGoogle"], button[onclick*="googleSignIn"] {
+        background: #4285f4 !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3) !important;
+    }
+
+    .google-btn:active, button[onclick*="signInWithGoogle"]:active {
+        background: #3367d6 !important;
+        transform: scale(0.98) !important;
+        box-shadow: 0 2px 8px rgba(66, 133, 244, 0.4) !important;
+    }
+
+    /* PRIMARY BUTTONS */
+    .btn-primary, .auth-btn {
+        background: #667eea !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+    }
+
+    .btn-primary:active, .auth-btn:active {
+        background: #5a67d8 !important;
+        transform: scale(0.98) !important;
+    }
+
+    /* SECONDARY BUTTONS */
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .btn-secondary:active {
+        background: rgba(255, 255, 255, 0.2) !important;
+        transform: scale(0.98) !important;
+    }
+
+    /* INPUT FIELDS */
+    input[type="text"], input[type="email"], input[type="password"], textarea {
+        width: 100% !important;
+        min-height: 50px !important;
+        padding: 15px !important;
+        margin: 10px 0 !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 12px !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        color: white !important;
+        font-size: 16px !important;
+        outline: none !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
+        box-sizing: border-box !important;
+    }
+
+    input:focus, textarea:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2) !important;
+    }
+
+    /* FORM GROUPS */
+    .form-group {
+        margin-bottom: 20px !important;
+    }
+
+    .form-group label {
+        display: block !important;
+        margin-bottom: 8px !important;
+        color: rgba(255, 255, 255, 0.8) !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+    }
+
+    /* AUTH TABS */
+    .auth-tabs {
+        display: flex !important;
+        margin-bottom: 25px !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-radius: 12px !important;
+        padding: 4px !important;
+    }
+
+    .auth-tab {
+        flex: 1 !important;
+        padding: 12px !important;
+        background: transparent !important;
+        border: none !important;
+        color: rgba(255, 255, 255, 0.6) !important;
+        cursor: pointer !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease !important;
+        font-size: 14px !important;
+        min-height: 44px !important;
+        touch-action: manipulation !important;
+    }
+
+    .auth-tab.active {
+        background: rgba(102, 126, 234, 0.2) !important;
+        color: #667eea !important;
+    }
+
+    /* MAIN APP LAYOUT */
+    .main-container {
+        width: 100vw !important;
+        height: 100vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        background: #0a0a0f !important;
+    }
+
+    /* HIDE DESKTOP ELEMENTS */
+    .sidebar, .right-panel {
+        display: none !important;
+    }
+
+    /* MAIN CONTENT */
+    .main-content {
+        flex: 1 !important;
+        width: 100% !important;
+        height: calc(100vh - 70px) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+    }
+
+    /* CHANNEL HEADER */
+    .channel-header {
+        padding: 15px 20px !important;
+        background: rgba(255, 255, 255, 0.02) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        flex-shrink: 0 !important;
+    }
+
+    .channel-header h2 {
+        font-size: 1.1rem !important;
+        margin: 0 !important;
+    }
+
+    /* MESSAGES CONTAINER */
+    .messages-container {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding: 15px !important;
+    }
+
+    /* MESSAGE INPUT */
+    .message-input-container {
+        padding: 15px !important;
+        background: rgba(255, 255, 255, 0.02) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+        flex-shrink: 0 !important;
+    }
+
+    .message-input {
+        width: 100% !important;
+        min-height: 45px !important;
+        padding: 12px 15px !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 20px !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        color: white !important;
+        font-size: 16px !important;
+        resize: none !important;
+        outline: none !important;
+    }
+
+    /* MOBILE NAVIGATION */
+    .mobile-nav {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 70px !important;
+        background: rgba(26, 26, 46, 0.95) !important;
+        backdrop-filter: blur(20px) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        z-index: 1000 !important;
+    }
+
+    .mobile-nav-buttons {
+        display: flex !important;
+        justify-content: space-around !important;
+        width: 100% !important;
+        max-width: 400px !important;
+    }
+
+    .mobile-nav-btn {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 8px 12px !important;
+        background: transparent !important;
+        border: none !important;
+        color: rgba(255, 255, 255, 0.6) !important;
+        cursor: pointer !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease !important;
+        min-height: 50px !important;
+        min-width: 60px !important;
+        touch-action: manipulation !important;
+    }
+
+    .mobile-nav-btn.active {
+        color: #667eea !important;
+        background: rgba(102, 126, 234, 0.1) !important;
+    }
+
+    .mobile-nav-btn i {
+        font-size: 1.2rem !important;
+        margin-bottom: 2px !important;
+    }
+
+    .mobile-nav-btn span {
+        font-size: 0.7rem !important;
+        font-weight: 500 !important;
+    }
+
+    /* MODALS */
+    .modal-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(0, 0, 0, 0.8) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 20px !important;
+        z-index: 10000 !important;
+    }
+
+    .modal-content {
+        width: 100% !important;
+        max-width: 350px !important;
+        max-height: 80vh !important;
+        background: rgba(26, 26, 46, 0.95) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 16px !important;
+        padding: 25px 20px !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    /* NOTIFICATIONS */
+    .notification {
+        position: fixed !important;
+        top: 20px !important;
+        left: 20px !important;
+        right: 20px !important;
+        width: auto !important;
+        max-width: none !important;
+        padding: 15px !important;
+        border-radius: 12px !important;
+        z-index: 10001 !important;
+        font-size: 14px !important;
+    }
+
+    /* SCROLLBARS */
+    ::-webkit-scrollbar {
+        width: 4px !important;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent !important;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2) !important;
+        border-radius: 2px !important;
+    }
+
+    /* ENSURE TOUCH WORKS */
+    .auth-container *, .main-container *, .modal-overlay * {
+        pointer-events: auto !important;
+        touch-action: manipulation !important;
+    }
+
+    /* LOADING STATES */
+    button:disabled {
+        opacity: 0.6 !important;
+        cursor: not-allowed !important;
+    }
+
+    /* FOCUS STATES */
+    button:focus, input:focus, textarea:focus {
+        outline: 2px solid #667eea !important;
+        outline-offset: 2px !important;
+    }
+}

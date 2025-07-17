@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StellarChat - Connect Across the Galaxy</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK v9 Compat -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+    <!-- Login/Register Screen -->
+    <div id="auth-container" class="auth-container">
+        <div class="auth-background">
+            <div class="stars"></div>
+            <div class="nebula"></div>
+        </div>
+        
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1 class="stellar-logo">
+                    <i class="fas fa-star"></i>
+                    StellarChat
+                </h1>
+                <p class="auth-subtitle">Connect with developers across the stellar drift</p>
+            </div>
+            
+            <div class="auth-forms">
+                <!-- Google Login Form -->
+                <div id="google-login-form" class="auth-form active">
+                    <h2>Welcome to the Galaxy</h2>
+                    <p class="auth-description">Sign in with Google to start your stellar journey</p>
+                    
+                    <button class="auth-btn google" onclick="handleGoogleLogin()">
+                        <i class="fab fa-google"></i>
+                        <span>Continue with Google</span>
+                    </button>
+                    
+                    <div class="auth-divider">
+                        <span>Secure • Fast • Easy</span>
+                    </div>
+                </div>
+                
+                <!-- Username Setup Form -->
+                <div id="username-setup-form" class="auth-form">
+                    <h2>Choose Your Stellar Identity</h2>
+                    <p class="auth-description">Pick a unique username for the galaxy</p>
+                    
+                    <div class="user-preview">
+                        <div class="preview-avatar">
+                            <img id="user-photo" src="" alt="Profile" style="display: none;">
+                            <i class="fas fa-user" id="default-avatar"></i>
+                        </div>
+                        <div class="preview-info">
+                            <span id="user-email">user@example.com</span>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <i class="fas fa-at"></i>
+                        <input type="text" id="chosen-username" placeholder="Choose username" required oninput="checkUsernameAvailability()">
+                        <div class="username-status" id="username-status"></div>
+                    </div>
+                    
+                    <button class="auth-btn primary" onclick="completeSetup()">
+                        <span>Enter the Galaxy</span>
+                        <i class="fas fa-rocket"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Chat Interface -->
+    <div id="main-container" class="main-container hidden">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="user-details">
+                        <span class="username" id="current-username">User</span>
+                        <span class="status online">Online</span>
+                    </div>
+                </div>
+                <div class="sidebar-controls">
+                    <button class="control-btn" onclick="showNotificationsPanel()" title="Notifications">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="notification-badge" style="display: none;">0</span>
+                    </button>
+                    <button class="control-btn" onclick="showSettings()" title="Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <button class="control-btn" onclick="logout()" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Navigation Tabs -->
+            <div class="sidebar-nav">
+                <button class="nav-tab active" onclick="showServersTab()" data-tab="servers">
+                    <i class="fas fa-server"></i>
+                    <span>Servers</span>
+                </button>
+                <button class="nav-tab" onclick="showDMsTab()" data-tab="dms">
+                    <i class="fas fa-comments"></i>
+                    <span>DMs</span>
+                </button>
+                <button class="nav-tab" onclick="showFriendsTab()" data-tab="friends">
+                    <i class="fas fa-user-friends"></i>
+                    <span>Friends</span>
+                </button>
+                <button class="nav-tab" onclick="showGroupsTab()" data-tab="groups">
+                    <i class="fas fa-users"></i>
+                    <span>Groups</span>
+                </button>
+            </div>
+            
+            <!-- Sidebar Content -->
+            <div class="sidebar-content">
+                <!-- Servers Tab -->
+                <div class="sidebar-tab-content active" id="servers-tab">
+                    <div class="tab-header">
+                        <h3>Servers</h3>
+                        <div class="tab-controls">
+                            <button class="control-btn" onclick="showCreateServerModal()" title="Create Server">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button class="control-btn" onclick="showServerBrowser()" title="Browse Servers">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="servers-list" id="servers-list">
+                        <!-- Servers will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- DMs Tab -->
+                <div class="sidebar-tab-content" id="dms-tab">
+                    <div class="tab-header">
+                        <h3>Direct Messages</h3>
+                    </div>
+                    <div class="dms-list" id="dms-list">
+                        <!-- DMs will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- Friends Tab -->
+                <div class="sidebar-tab-content" id="friends-tab">
+                    <div class="tab-header">
+                        <h3>Friends</h3>
+                        <div class="tab-controls">
+                            <button class="control-btn" onclick="addFriend()" title="Add Friend">
+                                <i class="fas fa-user-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="friends-list" id="friends-list">
+                        <!-- Friends will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- Groups Tab -->
+                <div class="sidebar-tab-content" id="groups-tab">
+                    <div class="tab-header">
+                        <h3>Group Chats</h3>
+                        <div class="tab-controls">
+                            <button class="control-btn" onclick="createGroupChat()" title="Create Group">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="group-chats-list" id="group-chats-list">
+                        <!-- Group chats will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Channel Header -->
+            <div class="channel-header">
+                <div class="channel-info">
+                    <h2 id="current-channel"># general</h2>
+                    <span class="channel-description">Welcome to StellarChat</span>
+                </div>
+                <div class="channel-controls">
+                    <button class="control-btn" onclick="startVoiceCall()" title="Voice Call">
+                        <i class="fas fa-phone"></i>
+                    </button>
+                    <button class="control-btn" onclick="showInviteToServer()" title="Invite People" id="invite-btn" style="display: none;">
+                        <i class="fas fa-user-plus"></i>
+                    </button>
+                    <button class="control-btn" onclick="showChannelSettings()" title="Channel Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Messages Area -->
+            <div class="messages-container" id="messages-container">
+                <div class="welcome-message">
+                    <div class="welcome-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <h3>Welcome to StellarChat!</h3>
+                    <p>Start chatting with developers across the stellar drift</p>
+                </div>
+            </div>
+            
+            <!-- Message Input -->
+            <div class="message-input-container">
+                <div class="message-input">
+                    <input type="text" id="message-input" placeholder="Message #general">
+                    <div class="input-controls">
+                        <button class="input-btn" onclick="attachFile()">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <button class="input-btn" onclick="sendMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <div class="panel-header">
+                <h3>Online Members</h3>
+            </div>
+            <div class="members-list" id="members-list">
+                <!-- Members will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <!-- Create Server Modal -->
+        <div id="create-server-modal" class="modal">
+            <div class="modal-header">
+                <h3>Create Your Server</h3>
+                <button class="close-btn" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div class="input-group">
+                    <label>Server Name</label>
+                    <input type="text" id="server-name" placeholder="Enter server name">
+                </div>
+                <div class="input-group">
+                    <label>Server Description</label>
+                    <textarea id="server-description" placeholder="Describe your server"></textarea>
+                </div>
+                <button class="modal-btn primary" onclick="createServer()">
+                    Create Server
+                </button>
+            </div>
+        </div>
+
+        <!-- Add Friend Modal -->
+        <div id="add-friend-modal" class="modal">
+            <div class="modal-header">
+                <h3>Add Friend</h3>
+                <button class="close-btn" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div class="input-group">
+                    <label>Username</label>
+                    <input type="text" id="friend-username" placeholder="Enter username">
+                </div>
+                <button class="modal-btn primary" onclick="sendFriendRequest()">
+                    Send Friend Request
+                </button>
+            </div>
+        </div>
+
+        <!-- Friend Requests Modal -->
+        <div id="friend-requests-modal" class="modal">
+            <div class="modal-header">
+                <h3>Friend Requests</h3>
+                <button class="close-btn" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div id="friend-requests-list">
+                    <!-- Friend requests will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Group Chat Modal -->
+        <div id="create-group-modal" class="modal">
+            <div class="modal-header">
+                <h3>Create Group Chat</h3>
+                <button class="close-btn" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div class="input-group">
+                    <label>Group Name</label>
+                    <input type="text" id="group-name" placeholder="Enter group name">
+                </div>
+                <div class="input-group">
+                    <label>Add Friends</label>
+                    <div id="friends-selector" class="friends-selector">
+                        <!-- Friends will be populated here -->
+                    </div>
+                </div>
+                <button class="modal-btn primary" onclick="createGroupChat()">
+                    Create Group
+                </button>
+            </div>
+        </div>
+
+        <!-- Invite to Server Modal -->
+        <div id="invite-server-modal" class="modal">
+            <div class="modal-header">
+                <h3>Invite to Server</h3>
+                <button class="close-btn" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div class="input-group">
+                    <label>Server: <span id="invite-server-name"></span></label>
+                </div>
+                <div class="input-group">
+                    <label>Invite by Username</label>
+                    <input type="text" id="invite-username" placeholder="Enter username to invite">
+                </div>
+                <button class="modal-btn primary" onclick="sendServerInvite()">
+                    Send Invite
+                </button>
+                <div class="input-group" style="margin-top: 20px;">
+                    <label>Or share invite link:</label>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="text" id="invite-link" readonly style="flex: 1; background: rgba(255, 255, 255, 0.1);">
+                        <button onclick="copyInviteLink()" style="padding: 8px 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Voice Call Modal -->
+        <div id="voice-call-modal" class="modal voice-modal">
+            <div class="call-header">
+                <h3>Voice Call - <span id="call-channel">#general</span></h3>
+                <div class="call-status">Connected</div>
+            </div>
+            <div class="call-content">
+                <div class="call-participants" id="call-participants">
+                    <!-- Participants will be shown here -->
+                </div>
+                <div class="call-controls">
+                    <button class="call-btn mute" onclick="toggleMute()">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button class="call-btn deafen" onclick="toggleDeafen()">
+                        <i class="fas fa-volume-up"></i>
+                    </button>
+                    <button class="call-btn test" onclick="testAudioPlayback()" title="Test Audio">
+                        <i class="fas fa-volume-high"></i>
+                    </button>
+                    <button class="call-btn leave" onclick="leaveCall()">
+                        <i class="fas fa-phone-slash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal settings-modal">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button class="close-btn" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <!-- Theme Settings -->
+                <div class="settings-section">
+                    <h4><i class="fas fa-palette"></i> Appearance</h4>
+                    <div class="setting-item">
+                        <label>Theme</label>
+                        <div class="theme-selector">
+                            <button class="theme-btn active" data-theme="dark" onclick="setTheme('dark')">
+                                <i class="fas fa-moon"></i>
+                                <span>Dark</span>
+                            </button>
+                            <button class="theme-btn" data-theme="light" onclick="setTheme('light')">
+                                <i class="fas fa-sun"></i>
+                                <span>Light</span>
+                            </button>
+                            <button class="theme-btn" data-theme="auto" onclick="setTheme('auto')">
+                                <i class="fas fa-adjust"></i>
+                                <span>Auto</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Settings -->
+                <div class="settings-section">
+                    <h4><i class="fas fa-user"></i> Profile</h4>
+                    <div class="current-profile">
+                        <div class="profile-avatar">
+                            <img id="settings-user-photo" src="" alt="Profile" style="display: none;">
+                            <i class="fas fa-user" id="settings-default-avatar"></i>
+                        </div>
+                        <div class="profile-info">
+                            <span id="settings-current-username">Username</span>
+                            <span id="settings-user-email">email@example.com</span>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label>Change Username</label>
+                        <div class="username-change">
+                            <div class="input-group">
+                                <i class="fas fa-at"></i>
+                                <input type="text" id="new-username" placeholder="Enter new username">
+                                <div class="username-status" id="new-username-status"></div>
+                            </div>
+                            <button class="change-username-btn" onclick="changeUsername()" disabled>
+                                <i class="fas fa-check"></i>
+                                Update
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notification Settings -->
+                <div class="settings-section">
+                    <h4><i class="fas fa-bell"></i> Notifications</h4>
+                    <div class="setting-item">
+                        <label>Sound Effects</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="sound-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label>Message Notifications</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="notifications-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- About Section -->
+                <div class="settings-section">
+                    <h4><i class="fas fa-info-circle"></i> About</h4>
+                    <div class="about-info">
+                        <p><strong>StellarChat</strong> v1.0</p>
+                        <p>Connect with developers across the stellar drift</p>
+                        <p>Built with Firebase & ❤️</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Panel Modal -->
+        <div id="admin-panel-modal" class="modal admin-modal">
+            <div class="modal-header">
+                <h3>Admin Panel</h3>
+                <button class="close-btn" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div class="admin-section">
+                    <h4>User Management</h4>
+                    <div class="user-list" id="admin-user-list">
+                        <!-- Users will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <div class="mobile-nav">
+        <div class="mobile-nav-buttons">
+            <button class="mobile-nav-btn active" data-view="chat" onclick="switchMobileView('chat')">
+                <i class="fas fa-comments"></i>
+                <span>Chat</span>
+            </button>
+            <button class="mobile-nav-btn" data-view="servers" onclick="switchMobileView('servers')">
+                <i class="fas fa-server"></i>
+                <span>Servers</span>
+            </button>
+            <button class="mobile-nav-btn" data-view="friends" onclick="switchMobileView('friends')">
+                <i class="fas fa-user-friends"></i>
+                <span>Friends</span>
+            </button>
+            <button class="mobile-nav-btn" data-view="members" onclick="switchMobileView('members')">
+                <i class="fas fa-users"></i>
+                <span>Members</span>
+            </button>
+            <button class="mobile-nav-btn" data-view="settings" onclick="switchMobileView('settings')">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div class="mobile-sidebar-overlay" id="mobile-sidebar-overlay" onclick="closeMobileSidebar()">
+        <div class="mobile-sidebar" id="mobile-sidebar" onclick="event.stopPropagation()">
+            <div class="mobile-sidebar-header">
+                <h3 id="mobile-sidebar-title">Servers</h3>
+                <button class="mobile-close-btn" onclick="closeMobileSidebar()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mobile-sidebar-content" id="mobile-sidebar-content">
+                <!-- Content will be populated based on current view -->
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
