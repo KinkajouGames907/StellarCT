@@ -1423,6 +1423,126 @@ body::before {
     box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
 }
 
+/* Changelog Styles */
+.changelog-content {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.changelog-entry {
+    margin-bottom: 25px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+}
+
+.changelog-version {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 5px;
+}
+
+.changelog-date {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 10px;
+}
+
+.changelog-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.changelog-list li {
+    padding: 4px 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.changelog-list li:before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    background: #667eea;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.desktop-optimized {
+    color: #10b981;
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-top: 10px;
+}
+
+/* Performance-based animation classes */
+.high-performance {
+    --animation-duration: 0.3s;
+    --particle-count: 50;
+}
+
+.medium-performance {
+    --animation-duration: 0.5s;
+    --particle-count: 25;
+}
+
+.low-performance {
+    --animation-duration: 0.8s;
+    --particle-count: 10;
+}
+
+.reduced-animations * {
+    animation-duration: 0.1s !important;
+    transition-duration: 0.1s !important;
+}
+
+.window-blurred {
+    --animation-duration: 2s;
+    --particle-count: 5;
+}
+
+.window-blurred .stars,
+.window-blurred .nebula,
+.window-blurred body::before {
+    animation-play-state: paused !important;
+}
+
+.window-focused .stars,
+.window-focused .nebula,
+.window-focused body::before {
+    animation-play-state: running !important;
+}
+
+/* Notification badge */
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #ef4444;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: notificationPulse 2s infinite;
+}
+
+@keyframes notificationPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
 /* Button Styles */
 .btn-primary, .btn-secondary, .btn-danger {
     padding: 10px 16px;

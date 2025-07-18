@@ -468,13 +468,45 @@
                     </div>
                 </div>
 
+                <!-- Changelog Section -->
+                <div class="settings-section">
+                    <h4><i class="fas fa-history"></i> Changelog</h4>
+                    <div class="changelog-content">
+                        <div class="changelog-entry">
+                            <div class="changelog-version">v1.1.0 - Latest</div>
+                            <div class="changelog-date">December 2024</div>
+                            <ul class="changelog-list">
+                                <li>✅ Removed mobile support for better desktop performance</li>
+                                <li>🔔 Enhanced notification system with proper sound alerts</li>
+                                <li>🎵 Added DM notification sounds</li>
+                                <li>⚡ Fixed animation performance issues when app is in background</li>
+                                <li>🚀 Improved overall app responsiveness</li>
+                                <li>📋 Added this changelog section</li>
+                            </ul>
+                        </div>
+                        <div class="changelog-entry">
+                            <div class="changelog-version">v1.0.0</div>
+                            <div class="changelog-date">November 2024</div>
+                            <ul class="changelog-list">
+                                <li>🎉 Initial release of StellarChat</li>
+                                <li>💬 Real-time messaging with Firebase</li>
+                                <li>🎤 Voice chat functionality</li>
+                                <li>👥 Server and DM support</li>
+                                <li>🔐 Google authentication</li>
+                                <li>🌟 Beautiful stellar-themed UI</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- About Section -->
                 <div class="settings-section">
                     <h4><i class="fas fa-info-circle"></i> About</h4>
                     <div class="about-info">
-                        <p><strong>StellarChat</strong> v1.0</p>
+                        <p><strong>StellarChat</strong> v1.1.0</p>
                         <p>Connect with developers across the stellar drift</p>
                         <p>Built with Firebase & ❤️</p>
+                        <p class="desktop-optimized">🖥️ Desktop Optimized</p>
                     </div>
                 </div>
             </div>
@@ -499,46 +531,7 @@
         </div>
     </div>
 
-    <!-- Mobile Navigation -->
-    <div class="mobile-nav">
-        <div class="mobile-nav-buttons">
-            <button class="mobile-nav-btn active" data-view="chat" onclick="switchMobileView('chat')">
-                <i class="fas fa-comments"></i>
-                <span>Chat</span>
-            </button>
-            <button class="mobile-nav-btn" data-view="servers" onclick="switchMobileView('servers')">
-                <i class="fas fa-server"></i>
-                <span>Servers</span>
-            </button>
-            <button class="mobile-nav-btn" data-view="friends" onclick="switchMobileView('friends')">
-                <i class="fas fa-user-friends"></i>
-                <span>Friends</span>
-            </button>
-            <button class="mobile-nav-btn" data-view="members" onclick="switchMobileView('members')">
-                <i class="fas fa-users"></i>
-                <span>Members</span>
-            </button>
-            <button class="mobile-nav-btn" data-view="settings" onclick="switchMobileView('settings')">
-                <i class="fas fa-cog"></i>
-                <span>Settings</span>
-            </button>
-        </div>
-    </div>
 
-    <!-- Mobile Sidebar Overlay -->
-    <div class="mobile-sidebar-overlay" id="mobile-sidebar-overlay" onclick="closeMobileSidebar()">
-        <div class="mobile-sidebar" id="mobile-sidebar" onclick="event.stopPropagation()">
-            <div class="mobile-sidebar-header">
-                <h3 id="mobile-sidebar-title">Servers</h3>
-                <button class="mobile-close-btn" onclick="closeMobileSidebar()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="mobile-sidebar-content" id="mobile-sidebar-content">
-                <!-- Content will be populated based on current view -->
-            </div>
-        </div>
-    </div>
 
     <script src="script.js"></script>
 </body>

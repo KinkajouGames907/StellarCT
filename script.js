@@ -1,18 +1,29 @@
 // StellarChat - Complete Server System
 
-// Mobile Detection
-const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-    window.innerWidth <= 768 ||
-    ('ontouchstart' in window);
+// Desktop-only application - Mobile support removed for better performance
+console.log('StellarChat - Desktop Optimized Version v1.1.0');
 
-console.log('Mobile detected:', isMobile);
+// Performance optimization - disable mobile detection
+const isDesktopApp = true;
 
-// Apply mobile class to body if mobile
-if (isMobile) {
-    document.addEventListener('DOMContentLoaded', function () {
-        document.body.classList.add('mobile-device');
-        initializeMobileInterface();
-    });
+// Initialize desktop-optimized features
+document.addEventListener('DOMContentLoaded', function () {
+    document.body.classList.add('desktop-optimized');
+    initializeDesktopFeatures();
+});
+
+// Desktop-specific initialization
+function initializeDesktopFeatures() {
+    // Enable high-performance animations
+    document.body.classList.add('high-performance');
+    
+    // Initialize notification system
+    initializeNotificationSystem();
+    
+    // Setup performance monitoring
+    setupPerformanceMonitoring();
+    
+    console.log('Desktop features initialized');
 }
 
 const firebaseConfig = {
@@ -153,6 +164,193 @@ function playMessageSound() {
     } catch (error) {
         console.log('Could not play message sound:', error);
     }
+}
+
+// Enhanced DM notification sound
+function playDMNotificationSound() {
+    try {
+        // Use Electron's notification sound if available
+        if (window.electronAPI && window.electronAPI.playNotificationSound) {
+            window.electronAPI.playNotificationSound();
+        } else {
+            // Create a more distinctive DM sound
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator1 = audioContext.createOscillator();
+            const oscillator2 = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator1.connect(gainNode);
+            oscillator2.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            // Two-tone notification for DMs
+            oscillator1.frequency.setValueAtTime(600, audioContext.currentTime);
+            oscillator2.frequency.setValueAtTime(800, audioContext.currentTime);
+            
+            oscillator1.frequency.setValueAtTime(500, audioContext.currentTime + 0.1);
+            oscillator2.frequency.setValueAtTime(700, audioContext.currentTime + 0.1);
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+
+            oscillator1.start(audioContext.currentTime);
+            oscillator2.start(audioContext.currentTime);
+            oscillator1.stop(audioContext.currentTime + 0.4);
+            oscillator2.stop(audioContext.currentTime + 0.4);
+        }
+    } catch (error) {
+        console.log('Could not play DM notification sound:', error);
+    }
+}
+
+// Initialize notification system
+function initializeNotificationSystem() {
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+            console.log('Notification permission:', permission);
+        });
+    }
+    
+    // Initialize notification badge counter
+    window.notificationCount = 0;
+    
+    console.log('Notification system initialized');
+}
+
+// Show desktop notification for DMs
+function showDesktopNotification(title, body, icon = null) {
+    try {
+        // Use Electron system notifications if available
+        if (window.electronAPI && window.electronAPI.showSystemNotification) {
+            window.electronAPI.showSystemNotification(title, body, icon);
+        } else if ('Notification' in window && Notification.permission === 'granted') {
+            const notification = new Notification(title, {
+                body: body,
+                icon: icon || '/favicon.ico',
+                badge: '/favicon.ico',
+                tag: 'stellarchat-dm',
+                requireInteraction: false,
+                silent: false
+            });
+            
+            // Auto close after 5 seconds
+            setTimeout(() => {
+                notification.close();
+            }, 5000);
+            
+            // Focus window when clicked
+            notification.onclick = () => {
+                window.focus();
+                notification.close();
+            };
+        }
+    } catch (error) {
+        console.log('Could not show desktop notification:', error);
+    }
+}
+
+// Update notification badge
+function updateNotificationBadge() {
+    try {
+        window.notificationCount = (window.notificationCount || 0) + 1;
+        const badge = document.getElementById('notification-badge');
+        if (badge) {
+            badge.textContent = window.notificationCount;
+            badge.style.display = 'flex';
+        }
+    } catch (error) {
+        console.log('Could not update notification badge:', error);
+    }
+}
+
+// Clear notification badge
+function clearNotificationBadge() {
+    try {
+        window.notificationCount = 0;
+        const badge = document.getElementById('notification-badge');
+        if (badge) {
+            badge.style.display = 'none';
+        }
+    } catch (error) {
+        console.log('Could not clear notification badge:', error);
+    }
+}
+
+// Show notifications panel
+function showNotificationsPanel() {
+    try {
+        showNotification('Notifications panel - Coming soon! 🔔', 'info');
+        // Clear badge when viewing notifications
+        clearNotificationBadge();
+    } catch (error) {
+        console.log('Could not show notifications panel:', error);
+    }
+}
+
+// Performance monitoring system
+function setupPerformanceMonitoring() {
+    let isWindowFocused = true;
+    let animationFrameId = null;
+    let lastFrameTime = performance.now();
+    let frameCount = 0;
+    let fps = 60;
+    
+    // Monitor window focus/blur
+    window.addEventListener('focus', () => {
+        isWindowFocused = true;
+        document.body.classList.remove('window-blurred');
+        document.body.classList.add('window-focused');
+        console.log('Window focused - enabling high performance mode');
+    });
+    
+    window.addEventListener('blur', () => {
+        isWindowFocused = false;
+        document.body.classList.remove('window-focused');
+        document.body.classList.add('window-blurred');
+        console.log('Window blurred - enabling power saving mode');
+    });
+    
+    // FPS monitoring and animation optimization
+    function monitorPerformance() {
+        const currentTime = performance.now();
+        frameCount++;
+        
+        if (currentTime - lastFrameTime >= 1000) {
+            fps = frameCount;
+            frameCount = 0;
+            lastFrameTime = currentTime;
+            
+            // Adjust animation quality based on FPS and focus
+            if (!isWindowFocused) {
+                // Reduce animations when window is not focused
+                document.body.classList.add('reduced-animations');
+            } else if (fps < 30) {
+                document.body.classList.add('low-performance');
+                document.body.classList.remove('medium-performance', 'high-performance');
+            } else if (fps < 50) {
+                document.body.classList.add('medium-performance');
+                document.body.classList.remove('low-performance', 'high-performance', 'reduced-animations');
+            } else {
+                document.body.classList.add('high-performance');
+                document.body.classList.remove('low-performance', 'medium-performance', 'reduced-animations');
+            }
+        }
+        
+        animationFrameId = requestAnimationFrame(monitorPerformance);
+    }
+    
+    // Start monitoring
+    animationFrameId = requestAnimationFrame(monitorPerformance);
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+        }
+    });
+    
+    console.log('Performance monitoring initialized');
 }
 
 function formatTimestamp(timestamp) {
@@ -1854,9 +2052,30 @@ function loadMessages() {
 
                 displayMessages(messages);
 
-                // Play sound for new messages from others
+                // Play sound and show notifications for new messages from others
                 if (hasNewMessage) {
-                    playMessageSound();
+                    // Check if this is a DM conversation
+                    if (currentChatType === 'dm') {
+                        playDMNotificationSound();
+                        
+                        // Show desktop notification for DMs
+                        const lastMessage = messages[messages.length - 1];
+                        if (lastMessage && lastMessage.uid !== currentUser?.uid) {
+                            showDesktopNotification(
+                                `New message from ${lastMessage.author}`,
+                                lastMessage.text.length > 50 ? 
+                                    lastMessage.text.substring(0, 50) + '...' : 
+                                    lastMessage.text,
+                                lastMessage.photoURL
+                            );
+                            
+                            // Update notification badge
+                            updateNotificationBadge();
+                        }
+                    } else {
+                        // Regular message sound for server messages
+                        playMessageSound();
+                    }
                 }
             } catch (error) {
                 console.error('Message snapshot error:', error);
@@ -2429,6 +2648,9 @@ async function startDMWithUser(username, userId) {
         currentChatType = 'dm';
         currentDMUser = { uid: userId, username: username };
         currentServer = null;
+
+        // Clear notification badge when opening DM
+        clearNotificationBadge();
 
         // Update UI
         document.getElementById('current-channel').textContent = `@ ${username}`;
@@ -6958,936 +7180,22 @@ console.log('🎨✨ STELLAR CHAT ULTIMATE ANIMATIONS LOADED! ✨🎨');
 console.log('🚀 Your chat app now has INCREDIBLE animations! 🚀');// =
 // Environment Detection
 const isElectron = !!(window.electronAPI && window.electronAPI.isElectron);
-const isWeb = !isElectron;
-const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+const isHardwareAccelerationDisabled = isElectron && (typeof process !== 'undefined' && process.argv && process.argv.includes('--disable-hardware-acceleration'));
 
-// Simple Animation Settings - Always Full Quality
-const animationSettings = {
-    enableParticles: !isMobile, // Enable particles on desktop
-    enableCursorTrail: !isMobile, // Enable cursor trail on desktop
-    enableSoundEffects: true,
-    animationDuration: 0.6, // Full animation duration
-    particleCount: isMobile ? 0 : 50, // Full particle count on desktop
-    enableAdvancedEffects: true // Always enable advanced effects
-};
-
-// Apply basic environment classes
-if (typeof window !== 'undefined' && window.electronAPI) {
-    document.body.classList.add('electron-app');
-} else {
-    document.body.classList.add('web-app');
+if (isElectron && isHardwareAccelerationDisabled) {
+    document.body.classList.add('cpu-efficient');
+    document.body.classList.add('reduced-animations');
+    console.log('Electron: CPU-efficient and reduced animations enabled for smoother performance.');
 }
 
-if (isMobile) {
-    document.body.classList.add('mobile-device');
-} else {
-    document.body.classList.add('desktop-device');
-}
+document.addEventListener('DOMContentLoaded', function () {
+    // Detect Electron and hardware acceleration status
+    const isElectron = !!(window.electronAPI && window.electronAPI.isElectron);
+    const isHardwareAccelerationDisabled = isElectron && (typeof process !== 'undefined' && process.argv && process.argv.includes('--disable-hardware-acceleration'));
 
-// Always enable GPU acceleration
-document.body.classList.add('gpu-accelerated');
-document.body.classList.add('high-performance');
-document.body.classList.add('animation-quality-high');
-
-console.log('🎨 Full quality animations enabled!', animationSettings);
-
-// Simple Animation System - Always Full Quality
-class SimpleAnimationSystem {
-    constructor() {
-        this.settings = animationSettings;
-        this.init();
-    }
-
-    init() {
-        console.log('🎨 Initializing full quality animations...');
-        
-        // Set animation durations to full quality
-        const root = document.documentElement;
-        root.style.setProperty('--animation-duration', `${this.settings.animationDuration}s`);
-        
-        // Enable all animation features
-        this.enableAllAnimations();
-    }
-
-    enableAllAnimations() {
-        // Always enable high-quality animations
-        document.body.classList.add('animations-enabled');
-        document.body.classList.add('full-quality');
-        
-        console.log('✨ All animations enabled at full quality!');
-    }
-}
-
-// Build-specific optimizations
-class BuildOptimizer {
-    constructor() {
-        this.init();
-    }
-
-    init() {
-        if (isElectron) {
-            this.optimizeForElectron();
-        } else {
-            this.optimizeForWeb();
-        }
-    }
-
-    optimizeForElectron() {
-        console.log('Optimizing for Electron build...');
-
-        // Enable all features for Electron
-        document.body.classList.add('electron-optimized');
-
-        // Use Electron-specific APIs if available
-        if (window.electronAPI) {
-            // Enable hardware-accelerated animations
-            document.body.classList.add('hardware-accelerated');
-
-            // Use Electron's notification sounds
-            window.playNotificationSound = () => {
-                if (window.electronAPI.playNotificationSound) {
-                    window.electronAPI.playNotificationSound();
-                }
-            };
-
-            // Monitor system performance
-            if (window.electronAPI.getSystemInfo) {
-                const systemInfo = window.electronAPI.getSystemInfo();
-                console.log('System Info:', systemInfo);
-            }
-        }
-    }
-
-    optimizeForWeb() {
-        console.log('Optimizing for web build...');
-
-        // Reduce animations for web to improve loading
-        document.body.classList.add('web-optimized');
-
-        // Lazy load heavy animations
-        this.lazyLoadAnimations();
-
-        // Use web-specific optimizations
-        if ('serviceWorker' in navigator) {
-            // Cache animation assets
-            this.cacheAnimationAssets();
-        }
-    }
-
-    lazyLoadAnimations() {
-        // Load particle system only when needed
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting && !window.particleSystem && animationSettings.enableParticles) {
-                    setTimeout(() => {
-                        if (!isMobile) {
-                            window.particleSystem = new ParticleSystem();
-                        }
-                    }, 1000);
-                }
-            });
-        });
-
-        // Observe the main container
-        const mainContainer = document.getElementById('main-container');
-        if (mainContainer) {
-            observer.observe(mainContainer);
-        }
-    }
-
-    cacheAnimationAssets() {
-        // Cache CSS and JS files for offline use
-        if ('caches' in window) {
-            caches.open('stellarchat-animations-v1').then(cache => {
-                cache.addAll([
-                    '/styles.css',
-                    '/script.js',
-                    '/voice-chat.js'
-                ]);
-            });
-        }
-    }
-}
-
-// Initialize simple animation system
-const simpleAnimationSystem = new SimpleAnimationSystem();
-
-// Simple Animation Initialization - Always Full Quality
-function initializeFullQualityAnimations() {
-    console.log(`🎨 Initializing full quality animations for ${typeof window !== 'undefined' && window.electronAPI ? 'Electron' : 'Web'} build...`);
-
-    // Always initialize particle system on desktop
-    if (animationSettings.enableParticles && !isMobile) {
-        setTimeout(() => {
-            if (!window.particleSystem) {
-                window.particleSystem = new ParticleSystem();
-                console.log('✨ Particle system initialized!');
-            }
-        }, 500);
-    }
-
-    // Always initialize cursor trail on desktop
-    if (animationSettings.enableCursorTrail && !isMobile) {
-        setTimeout(() => {
-            if (!window.cursorTrail) {
-                window.cursorTrail = new CursorTrail();
-                console.log('✨ Cursor trail initialized!');
-            }
-        }, 700);
-    }
-
-    // Initialize other animation systems
-    setTimeout(() => {
-        if (!window.soundEffects) {
-            window.soundEffects = new SoundEffects();
-            console.log('🔊 Sound effects initialized!');
-        }
-        if (!window.interactiveEnhancer) {
-            window.interactiveEnhancer = new InteractiveEnhancer();
-            console.log('🎯 Interactive enhancer initialized!');
-        }
-    }, 1000);
-
-    console.log('🚀 Full quality animations initialized successfully!');
-}
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeFullQualityAnimations);
-} else {
-    initializeFullQualityAnimations();
-}
-
-// Export animation system for global access
-window.simpleAnimationSystem = simpleAnimationSystem;
-window.animationSettings = animationSettings;
-
-console.log(`🎨 StellarChat Full Quality Animations Loaded!`);
-console.log(`Animation Settings:`, animationSettings);// =====
-// Authentication Functions
-function handleGoogleLogin() {
-    try {
-        console.log('handleGoogleLogin called');
-        
-        if (isDemoMode) {
-            console.log('Demo mode - creating demo user');
-            const demoUser = {
-                uid: 'demo-user-' + Date.now(),
-                email: 'demo@stellarchat.com',
-                displayName: 'Demo User',
-                photoURL: null
-            };
-            showUsernameSetup(demoUser);
-            return;
-        }
-
-        if (!firebase || !auth) {
-            console.error('Firebase not initialized');
-            showNotification('Authentication system not ready. Please refresh the page.', 'error');
-            return;
-        }
-
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.addScope('email');
-        provider.addScope('profile');
-
-        console.log('Starting Google authentication...');
-        
-        auth.signInWithPopup(provider)
-            .then(async (result) => {
-                console.log('Google auth successful:', result.user);
-                const user = result.user;
-
-                // Check if user already has a username
-                const userDoc = await db.collection('users').doc(user.uid).get();
-
-                if (userDoc.exists && userDoc.data().username) {
-                    currentUser = {
-                        uid: user.uid,
-                        email: user.email,
-                        displayName: user.displayName,
-                        photoURL: user.photoURL,
-                        username: userDoc.data().username
-                    };
-
-                    // Store session data for auto-login
-                    if (window.electronAPI) {
-                        await window.electronAPI.storeUserData(currentUser);
-                    }
-
-                    showMainInterface();
-                    showNotification('Welcome back!', 'success');
-                } else {
-                    // New user needs to set up username
-                    showUsernameSetup(user);
-                }
-            })
-            .catch((error) => {
-                console.error('Google auth error:', error);
-                if (error.code === 'auth/popup-closed-by-user') {
-                    showNotification('Sign-in cancelled', 'info');
-                } else if (error.code === 'auth/popup-blocked') {
-                    showNotification('Popup blocked. Please allow popups and try again.', 'error');
-                } else {
-                    showNotification('Sign-in failed. Please try again.', 'error');
-                }
-            });
-
-    } catch (error) {
-        console.error('handleGoogleLogin error:', error);
-        showNotification('Authentication error. Please refresh and try again.', 'error');
-    }
-}
-
-function showUsernameSetup(user) {
-    try {
-        console.log('Showing username setup for user:', user);
-        
-        // Hide Google login form
-        document.getElementById('google-login-form').classList.remove('active');
-        
-        // Show username setup form
-        const usernameForm = document.getElementById('username-setup-form');
-        usernameForm.classList.add('active');
-        
-        // Update user info in preview
-        const userPhoto = document.getElementById('user-photo');
-        const defaultAvatar = document.getElementById('default-avatar');
-        const userEmail = document.getElementById('user-email');
-        
-        if (user.photoURL) {
-            userPhoto.src = user.photoURL;
-            userPhoto.style.display = 'block';
-            defaultAvatar.style.display = 'none';
-        } else {
-            userPhoto.style.display = 'none';
-            defaultAvatar.style.display = 'block';
-        }
-        
-        userEmail.textContent = user.email;
-        
-        // Store user data temporarily
-        window.tempUser = user;
-        
-    } catch (error) {
-        console.error('showUsernameSetup error:', error);
-        showNotification('Setup error. Please refresh and try again.', 'error');
-    }
-}
-
-async function checkUsernameAvailability() {
-    try {
-        const usernameInput = document.getElementById('chosen-username');
-        const statusElement = document.getElementById('username-status');
-        const username = usernameInput.value.trim();
-        
-        if (!username) {
-            statusElement.textContent = '';
-            statusElement.className = 'username-status';
-            return;
-        }
-        
-        if (username.length < 3) {
-            statusElement.textContent = 'Username must be at least 3 characters';
-            statusElement.className = 'username-status error';
-            return;
-        }
-        
-        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-            statusElement.textContent = 'Only letters, numbers, and underscores allowed';
-            statusElement.className = 'username-status error';
-            return;
-        }
-        
-        if (isDemoMode) {
-            statusElement.textContent = 'Username available (demo mode)';
-            statusElement.className = 'username-status available';
-            return;
-        }
-        
-        statusElement.textContent = 'Checking availability...';
-        statusElement.className = 'username-status checking';
-        
-        // Check if username exists
-        const usernameDoc = await db.collection('usernames').doc(username).get();
-        
-        if (usernameDoc.exists) {
-            statusElement.textContent = 'Username is already taken';
-            statusElement.className = 'username-status taken';
-        } else {
-            statusElement.textContent = 'Username is available!';
-            statusElement.className = 'username-status available';
-        }
-        
-    } catch (error) {
-        console.error('checkUsernameAvailability error:', error);
-        const statusElement = document.getElementById('username-status');
-        statusElement.textContent = 'Error checking username';
-        statusElement.className = 'username-status error';
-    }
-}
-
-async function completeSetup() {
-    try {
-        const usernameInput = document.getElementById('chosen-username');
-        const username = usernameInput.value.trim();
-        const user = window.tempUser;
-        
-        if (!username) {
-            showNotification('Please enter a username', 'error');
-            return;
-        }
-        
-        if (username.length < 3) {
-            showNotification('Username must be at least 3 characters', 'error');
-            return;
-        }
-        
-        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-            showNotification('Only letters, numbers, and underscores allowed', 'error');
-            return;
-        }
-        
-        if (isDemoMode) {
-            // Demo mode setup
-            currentUser = {
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName,
-                photoURL: user.photoURL,
-                username: username
-            };
-            
-            showMainInterface();
-            showNotification('Welcome to StellarChat! (Demo Mode)', 'success');
-            return;
-        }
-        
-        // Check username availability one more time
-        const usernameDoc = await db.collection('usernames').doc(username).get();
-        if (usernameDoc.exists) {
-            showNotification('Username is already taken', 'error');
-            return;
-        }
-        
-        // Create user profile
-        const batch = db.batch();
-        
-        // Reserve username
-        batch.set(db.collection('usernames').doc(username), {
-            uid: user.uid
-        });
-        
-        // Create user document
-        batch.set(db.collection('users').doc(user.uid), {
-            username: username,
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-            status: 'online'
-        });
-        
-        await batch.commit();
-        
-        // Set current user
-        currentUser = {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
-            username: username
-        };
-        
-        // Store session data for auto-login
-        if (window.electronAPI) {
-            await window.electronAPI.storeUserData(currentUser);
-        }
-        
-        // Clean up temp data
-        delete window.tempUser;
-        
-        // Show main interface
-        showMainInterface();
-        showNotification('Welcome to StellarChat!', 'success');
-        
-    } catch (error) {
-        console.error('completeSetup error:', error);
-        showNotification('Setup failed. Please try again.', 'error');
-    }
-}
-
-function showMainInterface() {
-    try {
-        console.log('Showing main interface for user:', currentUser);
-        
-        // Hide auth container
-        document.getElementById('auth-container').classList.add('hidden');
-        
-        // Show main container
-        document.getElementById('main-container').classList.remove('hidden');
-        
-        // Update user info in sidebar
-        const usernameElement = document.getElementById('current-username');
-        if (usernameElement) {
-            usernameElement.textContent = currentUser.username;
-        }
-        
-        // Update user avatar
-        const userAvatar = document.querySelector('.user-avatar');
-        if (userAvatar) {
-            if (currentUser.photoURL) {
-                userAvatar.innerHTML = `<img src="${currentUser.photoURL}" alt="Avatar" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
-            } else {
-                userAvatar.innerHTML = '<i class="fas fa-user"></i>';
-            }
-        }
-        
-        // Initialize chat interface
-        initializeChatInterface();
-        
-    } catch (error) {
-        console.error('showMainInterface error:', error);
-        showNotification('Interface error. Please refresh the page.', 'error');
-    }
-}
-
-function initializeChatInterface() {
-    try {
-        console.log('Initializing chat interface...');
-        
-        // Load user servers
-        loadUserServers();
-        
-        // Set up message input handler
-        const messageInput = document.getElementById('message-input');
-        if (messageInput) {
-            messageInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
-        }
-        
-        // Initialize full quality animations
-        if (typeof initializeFullQualityAnimations === 'function') {
-            initializeFullQualityAnimations();
-        }
-        
-        console.log('Chat interface initialized successfully');
-        
-    } catch (error) {
-        console.error('initializeChatInterface error:', error);
-    }
-}
-
-async function logout() {
-    try {
-        console.log('Logging out user...');
-        
-        if (!isDemoMode && auth) {
-            await auth.signOut();
-        }
-        
-        // Clear session data
-        if (window.electronAPI) {
-            await window.electronAPI.clearUserData();
-        }
-        
-        // Reset global variables
-        currentUser = null;
-        currentServer = null;
-        currentChannel = 'general';
-        currentChatType = 'none';
-        currentDMUser = null;
-        
-        // Clear message listeners
-        messageListeners.forEach(unsubscribe => unsubscribe());
-        messageListeners = [];
-        
-        // Show auth container
-        document.getElementById('auth-container').classList.remove('hidden');
-        document.getElementById('main-container').classList.add('hidden');
-        
-        // Reset auth forms
-        document.getElementById('google-login-form').classList.add('active');
-        document.getElementById('username-setup-form').classList.remove('active');
-        
-        showNotification('Logged out successfully', 'success');
-        
-    } catch (error) {
-        console.error('Logout error:', error);
-        showNotification('Logout error', 'error');
-    }
-}
-
-// Make all functions globally available immediately
-window.handleGoogleLogin = handleGoogleLogin;
-window.checkUsernameAvailability = checkUsernameAvailability;
-window.completeSetup = completeSetup;
-window.showUsernameSetup = showUsernameSetup;
-window.showMainInterface = showMainInterface;
-window.initializeChatInterface = initializeChatInterface;
-window.logout = logout;
-
-// Debug: Ensure functions are available
-console.log('Authentication functions loaded:', {
-    handleGoogleLogin: typeof window.handleGoogleLogin,
-    checkUsernameAvailability: typeof window.checkUsernameAvailability,
-    completeSetup: typeof window.completeSetup,
-    logout: typeof window.logout
-});
-
-// Initialize authentication system
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing authentication...');
-    
-    // Check for auto-login
-    if (window.electronAPI) {
-        window.electronAPI.getUserData().then(result => {
-            if (result.success && result.data) {
-                console.log('Auto-login data found:', result.data);
-                currentUser = result.data;
-                showMainInterface();
-                showNotification('Welcome back!', 'success');
-            }
-        }).catch(error => {
-            console.log('No auto-login data available:', error);
-        });
+    if (isElectron && isHardwareAccelerationDisabled) {
+        document.body.classList.add('cpu-efficient');
+        document.body.classList.add('reduced-animations');
+        console.log('Electron: CPU-efficient and reduced animations enabled for smoother performance.');
     }
 });
-
-console.log('🔐 Authentication system loaded successfully!');// =========
-// Navigation and UI Functions
-function showServersTab() {
-    switchSidebarTab('servers');
-}
-
-function showDMsTab() {
-    switchSidebarTab('dms');
-}
-
-function showFriendsTab() {
-    switchSidebarTab('friends');
-}
-
-function showGroupsTab() {
-    switchSidebarTab('groups');
-}
-
-function switchSidebarTab(tabName) {
-    try {
-        // Update tab buttons
-        document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-
-        // Update tab content
-        document.querySelectorAll('.sidebar-tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-        document.getElementById(`${tabName}-tab`).classList.add('active');
-    } catch (error) {
-        console.error('switchSidebarTab error:', error);
-    }
-}
-
-function showNotificationsPanel() {
-    showNotification('Notifications panel coming soon!', 'info');
-}
-
-function showCreateServerModal() {
-    try {
-        const modal = document.getElementById('modal-overlay');
-        const createServerModal = document.getElementById('create-server-modal');
-        
-        if (modal && createServerModal) {
-            modal.classList.remove('hidden');
-            createServerModal.style.display = 'block';
-        } else {
-            showNotification('Create server feature coming soon!', 'info');
-        }
-    } catch (error) {
-        console.error('showCreateServerModal error:', error);
-        showNotification('Create server feature coming soon!', 'info');
-    }
-}
-
-function showServerBrowser() {
-    showNotification('Server browser coming soon!', 'info');
-}
-
-function createServer() {
-    try {
-        const serverName = document.getElementById('server-name')?.value?.trim();
-        const serverDescription = document.getElementById('server-description')?.value?.trim();
-        
-        if (!serverName) {
-            showNotification('Please enter a server name', 'error');
-            return;
-        }
-        
-        if (isDemoMode) {
-            showNotification('Server created successfully! (Demo Mode)', 'success');
-            closeModal();
-            return;
-        }
-        
-        // TODO: Implement actual server creation
-        showNotification('Server creation feature coming soon!', 'info');
-        closeModal();
-        
-    } catch (error) {
-        console.error('createServer error:', error);
-        showNotification('Failed to create server', 'error');
-    }
-}
-
-function addFriend() {
-    try {
-        const modal = document.getElementById('modal-overlay');
-        const addFriendModal = document.getElementById('add-friend-modal');
-        
-        if (modal && addFriendModal) {
-            modal.classList.remove('hidden');
-            addFriendModal.style.display = 'block';
-        } else {
-            showNotification('Add friend feature coming soon!', 'info');
-        }
-    } catch (error) {
-        console.error('addFriend error:', error);
-        showNotification('Add friend feature coming soon!', 'info');
-    }
-}
-
-function sendFriendRequest() {
-    try {
-        const username = document.getElementById('friend-username')?.value?.trim();
-        
-        if (!username) {
-            showNotification('Please enter a username', 'error');
-            return;
-        }
-        
-        if (isDemoMode) {
-            showNotification('Friend request sent! (Demo Mode)', 'success');
-            closeModal();
-            return;
-        }
-        
-        // TODO: Implement actual friend request
-        showNotification('Friend request feature coming soon!', 'info');
-        closeModal();
-        
-    } catch (error) {
-        console.error('sendFriendRequest error:', error);
-        showNotification('Failed to send friend request', 'error');
-    }
-}
-
-function createGroupChat() {
-    try {
-        const modal = document.getElementById('modal-overlay');
-        const createGroupModal = document.getElementById('create-group-modal');
-        
-        if (modal && createGroupModal) {
-            modal.classList.remove('hidden');
-            createGroupModal.style.display = 'block';
-        } else {
-            showNotification('Group chat feature coming soon!', 'info');
-        }
-    } catch (error) {
-        console.error('createGroupChat error:', error);
-        showNotification('Group chat feature coming soon!', 'info');
-    }
-}
-
-function showInviteToServer() {
-    try {
-        const modal = document.getElementById('modal-overlay');
-        const inviteModal = document.getElementById('invite-server-modal');
-        
-        if (modal && inviteModal) {
-            modal.classList.remove('hidden');
-            inviteModal.style.display = 'block';
-        } else {
-            showNotification('Server invite feature coming soon!', 'info');
-        }
-    } catch (error) {
-        console.error('showInviteToServer error:', error);
-        showNotification('Server invite feature coming soon!', 'info');
-    }
-}
-
-function sendServerInvite() {
-    try {
-        const username = document.getElementById('invite-username')?.value?.trim();
-        
-        if (!username) {
-            showNotification('Please enter a username', 'error');
-            return;
-        }
-        
-        if (isDemoMode) {
-            showNotification('Server invite sent! (Demo Mode)', 'success');
-            closeModal();
-            return;
-        }
-        
-        // TODO: Implement actual server invite
-        showNotification('Server invite feature coming soon!', 'info');
-        closeModal();
-        
-    } catch (error) {
-        console.error('sendServerInvite error:', error);
-        showNotification('Failed to send server invite', 'error');
-    }
-}
-
-function copyInviteLink() {
-    try {
-        const inviteLink = document.getElementById('invite-link');
-        if (inviteLink) {
-            inviteLink.select();
-            document.execCommand('copy');
-            showNotification('Invite link copied!', 'success');
-        }
-    } catch (error) {
-        console.error('copyInviteLink error:', error);
-        showNotification('Failed to copy invite link', 'error');
-    }
-}
-
-function showChannelSettings() {
-    showNotification('Channel settings coming soon!', 'info');
-}
-
-function startVoiceCall() {
-    try {
-        const modal = document.getElementById('modal-overlay');
-        const voiceModal = document.getElementById('voice-call-modal');
-        
-        if (modal && voiceModal) {
-            modal.classList.remove('hidden');
-            voiceModal.style.display = 'block';
-            showNotification('Voice call started!', 'success');
-        } else {
-            showNotification('Voice call feature coming soon!', 'info');
-        }
-    } catch (error) {
-        console.error('startVoiceCall error:', error);
-        showNotification('Voice call feature coming soon!', 'info');
-    }
-}
-
-function toggleMute() {
-    const muteBtn = document.querySelector('.call-btn.mute');
-    if (muteBtn) {
-        muteBtn.classList.toggle('active');
-        const isMuted = muteBtn.classList.contains('active');
-        showNotification(isMuted ? 'Microphone muted' : 'Microphone unmuted', 'info');
-    }
-}
-
-function toggleDeafen() {
-    const deafenBtn = document.querySelector('.call-btn.deafen');
-    if (deafenBtn) {
-        deafenBtn.classList.toggle('active');
-        const isDeafened = deafenBtn.classList.contains('active');
-        showNotification(isDeafened ? 'Audio deafened' : 'Audio enabled', 'info');
-    }
-}
-
-function testAudioPlayback() {
-    showNotification('Audio test: Beep!', 'info');
-    if (window.soundEffects) {
-        window.soundEffects.playSuccessSound();
-    }
-}
-
-function leaveCall() {
-    try {
-        closeModal();
-        showNotification('Left voice call', 'info');
-    } catch (error) {
-        console.error('leaveCall error:', error);
-    }
-}
-
-function closeModal() {
-    try {
-        const modal = document.getElementById('modal-overlay');
-        if (modal) {
-            modal.classList.add('hidden');
-            
-            // Hide all modals
-            const modals = modal.querySelectorAll('.modal');
-            modals.forEach(m => m.style.display = 'none');
-        }
-    } catch (error) {
-        console.error('closeModal error:', error);
-    }
-}
-
-function attachFile() {
-    showNotification('File attachments coming soon!', 'info');
-}
-
-// Mobile Navigation Functions
-function switchMobileView(view) {
-    try {
-        // Update nav buttons
-        document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[data-view="${view}"]`).classList.add('active');
-        
-        // Show appropriate content
-        showNotification(`Switched to ${view} view`, 'info');
-    } catch (error) {
-        console.error('switchMobileView error:', error);
-    }
-}
-
-function closeMobileSidebar() {
-    try {
-        const overlay = document.getElementById('mobile-sidebar-overlay');
-        if (overlay) {
-            overlay.classList.add('hidden');
-        }
-    } catch (error) {
-        console.error('closeMobileSidebar error:', error);
-    }
-}
-
-// Make all UI functions globally available
-window.showServersTab = showServersTab;
-window.showDMsTab = showDMsTab;
-window.showFriendsTab = showFriendsTab;
-window.showGroupsTab = showGroupsTab;
-window.switchSidebarTab = switchSidebarTab;
-window.showNotificationsPanel = showNotificationsPanel;
-window.showCreateServerModal = showCreateServerModal;
-window.showServerBrowser = showServerBrowser;
-window.createServer = createServer;
-window.addFriend = addFriend;
-window.sendFriendRequest = sendFriendRequest;
-window.createGroupChat = createGroupChat;
-window.showInviteToServer = showInviteToServer;
-window.sendServerInvite = sendServerInvite;
-window.copyInviteLink = copyInviteLink;
-window.showChannelSettings = showChannelSettings;
-window.startVoiceCall = startVoiceCall;
-window.toggleMute = toggleMute;
-window.toggleDeafen = toggleDeafen;
-window.testAudioPlayback = testAudioPlayback;
-window.leaveCall = leaveCall;
-window.closeModal = closeModal;
-window.attachFile = attachFile;
-window.switchMobileView = switchMobileView;
-window.closeMobileSidebar = closeMobileSidebar;
-
-console.log('🎯 UI functions loaded successfully!');
