@@ -323,11 +323,20 @@ function setupPerformanceMonitoring() {
             
             // Adjust animation quality based on FPS and focus
             if (!isWindowFocused) {
-                // Reduce animations when window is not focused
+                // Drastically reduce animations when window is not focused
                 document.body.classList.add('reduced-animations');
+                document.body.classList.remove('high-performance', 'medium-performance', 'low-performance');
+                
+                // Slow down monitoring when window is blurred to save resources
+                setTimeout(() => {
+                    if (!isWindowFocused && animationFrameId) {
+                        animationFrameId = requestAnimationFrame(monitorPerformance);
+                    }
+                }, 1000); // Check every 1 second instead of every frame when blurred
+                return;
             } else if (fps < 30) {
                 document.body.classList.add('low-performance');
-                document.body.classList.remove('medium-performance', 'high-performance');
+                document.body.classList.remove('medium-performance', 'high-performance', 'reduced-animations');
             } else if (fps < 50) {
                 document.body.classList.add('medium-performance');
                 document.body.classList.remove('low-performance', 'high-performance', 'reduced-animations');
@@ -337,7 +346,10 @@ function setupPerformanceMonitoring() {
             }
         }
         
-        animationFrameId = requestAnimationFrame(monitorPerformance);
+        // Only continue high-frequency monitoring when window is focused
+        if (isWindowFocused) {
+            animationFrameId = requestAnimationFrame(monitorPerformance);
+        }
     }
     
     // Start monitoring
@@ -2054,27 +2066,50 @@ function loadMessages() {
 
                 // Play sound and show notifications for new messages from others
                 if (hasNewMessage) {
-                    // Check if this is a DM conversation
-                    if (currentChatType === 'dm') {
-                        playDMNotificationSound();
+                    // Get the newest message from someone else
+                    const newMessages = messages.filter(msg => 
+                        msg.uid !== currentUser?.uid && 
+                        (msg.timestamp?.toMillis ? msg.timestamp.toMillis() : msg.timestamp) > (now - 5000)
+                    );
+                    
+                    if (newMessages.length > 0) {
+                        const latestMessage = newMessages[newMessages.length - 1];
                         
-                        // Show desktop notification for DMs
-                        const lastMessage = messages[messages.length - 1];
-                        if (lastMessage && lastMessage.uid !== currentUser?.uid) {
+                        // Check if this is a DM conversation
+                        if (currentChatType === 'dm') {
+                            playDMNotificationSound();
+                            
+                            // Show desktop notification for DMs
                             showDesktopNotification(
-                                `New message from ${lastMessage.author}`,
-                                lastMessage.text.length > 50 ? 
-                                    lastMessage.text.substring(0, 50) + '...' : 
-                                    lastMessage.text,
-                                lastMessage.photoURL
+                                `New message from ${latestMessage.author}`,
+                                latestMessage.text.length > 50 ? 
+                                    latestMessage.text.substring(0, 50) + '...' : 
+                                    latestMessage.text,
+                                latestMessage.photoURL
                             );
                             
                             // Update notification badge
                             updateNotificationBadge();
+                        } else if (currentChatType === 'server') {
+                            // Regular message sound for server messages
+                            playMessageSound();
+                            
+                            // Show notification for server messages too (less intrusive)
+                            if (!document.hasFocus()) {
+                                showDesktopNotification(
+                                    `New message in #${currentChannel}`,
+                                    `${latestMessage.author}: ${latestMessage.text.length > 30 ? 
+                                        latestMessage.text.substring(0, 30) + '...' : 
+                                        latestMessage.text}`,
+                                    latestMessage.photoURL
+                                );
+                            }
                         }
-                    } else {
-                        // Regular message sound for server messages
-                        playMessageSound();
+                        
+                        // Always play some notification sound for any new message
+                        if (currentChatType === 'none') {
+                            playNotificationSound();
+                        }
                     }
                 }
             } catch (error) {

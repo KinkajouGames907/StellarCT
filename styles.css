@@ -1504,20 +1504,42 @@ body::before {
 }
 
 .window-blurred {
-    --animation-duration: 2s;
-    --particle-count: 5;
+    --animation-duration: 10s;
+    --particle-count: 0;
 }
 
 .window-blurred .stars,
 .window-blurred .nebula,
 .window-blurred body::before {
     animation-play-state: paused !important;
+    opacity: 0.1 !important;
 }
 
 .window-focused .stars,
 .window-focused .nebula,
 .window-focused body::before {
     animation-play-state: running !important;
+    opacity: 1 !important;
+}
+
+/* Enhanced reduced animations for better performance */
+.reduced-animations * {
+    animation-duration: 0.05s !important;
+    transition-duration: 0.05s !important;
+    animation-iteration-count: 1 !important;
+}
+
+.reduced-animations .stars,
+.reduced-animations .nebula,
+.reduced-animations body::before {
+    animation-play-state: paused !important;
+    opacity: 0.05 !important;
+}
+
+.reduced-animations .message {
+    animation: none !important;
+    transform: none !important;
+    transition: none !important;
 }
 
 /* Notification badge */
