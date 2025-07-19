@@ -849,6 +849,27 @@ body::before {
     flex-direction: column;
     min-height: 0;
     max-height: calc(100vh - 160px);
+    position: relative;
+}
+
+/* Messages inner container */
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 10px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure messages container has proper scrolling */
+#messages {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: min-content;
+    overflow-y: auto;
+    max-height: 100%;
 }
 
 .welcome-message {

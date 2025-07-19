@@ -2293,7 +2293,7 @@ async function joinServer(serverId) {
         const messagesContainer = document.getElementById('messages-container');
         if (messagesContainer) {
             messagesContainer.innerHTML = `
-                <div class="messages" id="messages"></div>
+                <div class="messages" id="messages" style="flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px;"></div>
             `;
         }
 
@@ -2496,7 +2496,13 @@ function loadDemoMessages() {
 function displayMessages(messages) {
     try {
         const messagesContainer = document.getElementById('messages');
-        if (!messagesContainer) return;
+        if (!messagesContainer) {
+            console.warn('Messages container not found');
+            return;
+        }
+
+        // Store current scroll position to check if user was at bottom
+        const wasAtBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 50;
 
         messagesContainer.innerHTML = '';
 
@@ -2525,9 +2531,98 @@ function displayMessages(messages) {
             messagesContainer.appendChild(messageElement);
         });
 
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        // Auto-scroll to bottom if user was already at bottom or if it's the first load
+        if (wasAtBottom || messages.length <= 5) {
+            setTimeout(() => {
+                smoothScrollToBottom(messagesContainer);
+            }, 100);
+        }
+
+        // Show scroll-to-bottom button if user is not at bottom and there are many messages
+        if (!wasAtBottom && messages.length > 10) {
+            showScrollToBottomButton();
+        } else {
+            hideScrollToBottomButton();
+        }
+
+        console.log(`📝 Displayed ${messages.length} messages, scroll position updated`);
     } catch (error) {
         console.error('Display messages error:', error);
+    }
+}
+
+// Smooth scroll to bottom function
+function smoothScrollToBottom(container) {
+    try {
+        if (!container) return;
+        
+        container.scrollTo({
+            top: container.scrollHeight,
+            behavior: 'smooth'
+        });
+    } catch (error) {
+        // Fallback for browsers that don't support smooth scrolling
+        container.scrollTop = container.scrollHeight;
+    }
+}
+
+// Show scroll-to-bottom button
+function showScrollToBottomButton() {
+    try {
+        // Remove existing button if present
+        hideScrollToBottomButton();
+        
+        const messagesContainer = document.getElementById('messages-container');
+        if (!messagesContainer) return;
+        
+        const scrollButton = document.createElement('button');
+        scrollButton.id = 'scroll-to-bottom-btn';
+        scrollButton.className = 'scroll-to-bottom-button';
+        scrollButton.innerHTML = '<i class="fas fa-chevron-down"></i>';
+        scrollButton.title = 'Scroll to bottom';
+        
+        scrollButton.style.cssText = `
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        `;
+        
+        scrollButton.addEventListener('click', () => {
+            const messages = document.getElementById('messages');
+            if (messages) {
+                smoothScrollToBottom(messages);
+                hideScrollToBottomButton();
+            }
+        });
+        
+        messagesContainer.appendChild(scrollButton);
+    } catch (error) {
+        console.error('Error showing scroll button:', error);
+    }
+}
+
+// Hide scroll-to-bottom button
+function hideScrollToBottomButton() {
+    try {
+        const existingButton = document.getElementById('scroll-to-bottom-btn');
+        if (existingButton) {
+            existingButton.remove();
+        }
+    } catch (error) {
+        console.error('Error hiding scroll button:', error);
     }
 }
 
@@ -3040,7 +3135,7 @@ async function startDMWithUser(username, userId) {
         const messagesContainer = document.getElementById('messages-container');
         if (messagesContainer) {
             messagesContainer.innerHTML = `
-                <div class="messages" id="messages"></div>
+                <div class="messages" id="messages" style="flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px;"></div>
             `;
         }
 
@@ -3941,7 +4036,7 @@ async function startDMWithUser(username, userId) {
         const messagesContainer = document.getElementById('messages-container');
         if (messagesContainer) {
             messagesContainer.innerHTML = `
-                <div class="messages" id="messages"></div>
+                <div class="messages" id="messages" style="flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px;"></div>
             `;
         }
 
@@ -4481,7 +4576,7 @@ async function joinGroupChat(groupId, groupName) {
         const messagesContainer = document.getElementById('messages-container');
         if (messagesContainer) {
             messagesContainer.innerHTML = `
-                <div class="messages" id="messages"></div>
+                <div class="messages" id="messages" style="flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px;"></div>
             `;
         }
 
