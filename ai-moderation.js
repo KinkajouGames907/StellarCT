@@ -1665,6 +1665,13 @@ class AdminInterfaceManager {
         return emailToCheck === this.adminEmail;
     }
 
+    // Check if current user is SoraNeko (special admin with enhanced privileges)
+    isSoraNekoAdmin() {
+        return currentUser && 
+               currentUser.username === 'SoraNeko' && 
+               currentUser.email === 'albertderek6878@gmail.com';
+    }
+
     // Add secret admin menu button to the interface
     addAdminMenuButton() {
         // Add admin button to sidebar controls
@@ -1752,6 +1759,12 @@ class AdminInterfaceManager {
                                 style="flex: 1; padding: 15px; border: none; background: #f9fafb; cursor: pointer; border-bottom: 3px solid #dc2626;">
                             <i class="fas fa-user-lock"></i> Manual Lock
                         </button>
+                        ${this.isSoraNekoAdmin() ? `
+                        <button class="admin-tab" onclick="window.stellarChatModeration.adminInterface.showAdminTab('sora-admin')"
+                                style="flex: 1; padding: 15px; border: none; background: #f9fafb; cursor: pointer; border-bottom: 3px solid transparent;">
+                            <i class="fas fa-crown"></i> SoraNeko Admin
+                        </button>
+                        ` : ''}
                         <button class="admin-tab" onclick="window.stellarChatModeration.adminInterface.showAdminTab('locked-accounts')"
                                 style="flex: 1; padding: 15px; border: none; background: #f9fafb; cursor: pointer; border-bottom: 3px solid transparent;">
                             <i class="fas fa-list"></i> Locked Accounts
@@ -1880,6 +1893,168 @@ class AdminInterfaceManager {
                             <!-- Will be populated by JavaScript -->
                         </div>
                     </div>
+
+                    <!-- SoraNeko Special Admin Tab -->
+                    ${this.isSoraNekoAdmin() ? `
+                    <div id="admin-tab-sora-admin" class="admin-tab-content" style="padding: 30px; display: none;">
+                        <h3 style="margin-bottom: 20px; color: #7c3aed;">
+                            <i class="fas fa-crown"></i> SoraNeko Special Admin Panel
+                        </h3>
+                        
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 25px; margin-bottom: 30px; color: white; text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 15px;">
+                                <i class="fas fa-crown"></i>
+                            </div>
+                            <h4 style="margin: 0 0 10px 0; font-size: 24px;">Welcome, SoraNeko!</h4>
+                            <p style="margin: 0; opacity: 0.9;">You have special administrative privileges to manage user accounts.</p>
+                        </div>
+
+                        <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+                            <p style="color: #92400e; margin: 0;">
+                                <strong>🔥 Special Powers:</strong> As SoraNeko, you can instantly lock any user account with custom reasons and durations.
+                            </p>
+                        </div>
+
+                        <div style="display: grid; gap: 25px; max-width: 600px;">
+                            <div>
+                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">
+                                    <i class="fas fa-user"></i> Target Username:
+                                </label>
+                                <input type="text" id="sora-lock-username" placeholder="Enter username to lock" style="
+                                    width: 100%;
+                                    padding: 15px;
+                                    border: 2px solid #7c3aed;
+                                    border-radius: 8px;
+                                    font-size: 16px;
+                                    transition: all 0.2s;
+                                " onfocus="this.style.borderColor='#5b21b6'; this.style.boxShadow='0 0 0 3px rgba(124, 58, 237, 0.1)'" onblur="this.style.borderColor='#7c3aed'; this.style.boxShadow='none'">
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">
+                                        <i class="fas fa-clock"></i> Lock Duration:
+                                    </label>
+                                    <select id="sora-lock-duration" style="
+                                        width: 100%;
+                                        padding: 15px;
+                                        border: 2px solid #7c3aed;
+                                        border-radius: 8px;
+                                        font-size: 16px;
+                                        background: white;
+                                    ">
+                                        <option value="0.5">30 minutes</option>
+                                        <option value="1">1 hour</option>
+                                        <option value="3">3 hours</option>
+                                        <option value="6">6 hours</option>
+                                        <option value="12">12 hours</option>
+                                        <option value="24" selected>24 hours (1 day)</option>
+                                        <option value="48">48 hours (2 days)</option>
+                                        <option value="72">72 hours (3 days)</option>
+                                        <option value="168">168 hours (1 week)</option>
+                                        <option value="336">336 hours (2 weeks)</option>
+                                        <option value="720">720 hours (1 month)</option>
+                                        <option value="custom">Custom duration...</option>
+                                    </select>
+                                    <input type="number" id="sora-lock-custom-duration" placeholder="Custom hours" 
+                                           style="width: 100%; padding: 15px; border: 2px solid #7c3aed; border-radius: 8px; font-size: 16px; margin-top: 10px; display: none;">
+                                </div>
+
+                                <div>
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">
+                                        <i class="fas fa-tags"></i> Lock Category:
+                                    </label>
+                                    <select id="sora-lock-category" style="
+                                        width: 100%;
+                                        padding: 15px;
+                                        border: 2px solid #7c3aed;
+                                        border-radius: 8px;
+                                        font-size: 16px;
+                                        background: white;
+                                    ">
+                                        <option value="inappropriate_content">Inappropriate Content</option>
+                                        <option value="harassment">Harassment</option>
+                                        <option value="spam">Spam/Flooding</option>
+                                        <option value="toxic_behavior">Toxic Behavior</option>
+                                        <option value="rule_violation">Rule Violation</option>
+                                        <option value="security_concern">Security Concern</option>
+                                        <option value="custom">Custom Reason</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">
+                                    <i class="fas fa-comment-alt"></i> Detailed Reason:
+                                </label>
+                                <textarea id="sora-lock-reason" placeholder="Enter detailed reason for the account lock..." style="
+                                    width: 100%;
+                                    padding: 15px;
+                                    border: 2px solid #7c3aed;
+                                    border-radius: 8px;
+                                    font-size: 16px;
+                                    min-height: 120px;
+                                    resize: vertical;
+                                    font-family: inherit;
+                                "></textarea>
+                            </div>
+
+                            <div style="display: flex; gap: 15px; margin-top: 20px;">
+                                <button onclick="window.stellarChatModeration.adminInterface.executeSoraNekoLock()" style="
+                                    flex: 2;
+                                    background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+                                    color: white;
+                                    border: none;
+                                    padding: 18px;
+                                    border-radius: 8px;
+                                    font-size: 18px;
+                                    font-weight: 600;
+                                    cursor: pointer;
+                                    transition: all 0.2s;
+                                    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+                                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(124, 58, 237, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(124, 58, 237, 0.3)'">
+                                    <i class="fas fa-hammer"></i> Execute Lock
+                                </button>
+                                <button onclick="window.stellarChatModeration.adminInterface.clearSoraNekoForm()" style="
+                                    flex: 1;
+                                    background: #6b7280;
+                                    color: white;
+                                    border: none;
+                                    padding: 18px;
+                                    border-radius: 8px;
+                                    font-size: 16px;
+                                    cursor: pointer;
+                                    transition: all 0.2s;
+                                " onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'">
+                                    <i class="fas fa-eraser"></i> Clear
+                                </button>
+                            </div>
+
+                            <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; margin-top: 25px;">
+                                <h4 style="color: #374151; margin-bottom: 15px;">
+                                    <i class="fas fa-info-circle"></i> Quick Actions:
+                                </h4>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                                    <button onclick="window.stellarChatModeration.adminInterface.quickLock('spam', 6)" style="
+                                        background: #f59e0b; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 14px;
+                                    ">
+                                        <i class="fas fa-ban"></i> Quick Spam Lock (6h)
+                                    </button>
+                                    <button onclick="window.stellarChatModeration.adminInterface.quickLock('toxic', 24)" style="
+                                        background: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 14px;
+                                    ">
+                                        <i class="fas fa-fire"></i> Toxic Behavior (24h)
+                                    </button>
+                                    <button onclick="window.stellarChatModeration.adminInterface.quickLock('warning', 1)" style="
+                                        background: #10b981; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 14px;
+                                    ">
+                                        <i class="fas fa-exclamation"></i> Warning Lock (1h)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
 
                     <!-- Logs Tab -->
                     <div id="admin-tab-logs" class="admin-tab-content" style="padding: 30px; display: none;">
@@ -2284,6 +2459,186 @@ class AdminInterfaceManager {
         if (visibleTab) {
             const tabName = visibleTab.id.replace('admin-tab-', '');
             this.loadTabData(tabName);
+        }
+    }
+
+    // SoraNeko Special Admin Methods
+    
+    // Execute SoraNeko admin lock
+    async executeSoraNekoLock() {
+        if (!this.isSoraNekoAdmin()) {
+            console.error('❌ Unauthorized SoraNeko admin access attempt');
+            alert('❌ Access denied. This feature is only available to SoraNeko.');
+            return;
+        }
+
+        try {
+            const username = document.getElementById('sora-lock-username').value.trim();
+            const durationSelect = document.getElementById('sora-lock-duration');
+            const customDuration = document.getElementById('sora-lock-custom-duration');
+            const category = document.getElementById('sora-lock-category').value;
+            const reason = document.getElementById('sora-lock-reason').value.trim();
+
+            // Validation
+            if (!username) {
+                alert('👑 Please enter a username to lock.');
+                document.getElementById('sora-lock-username').focus();
+                return;
+            }
+
+            if (!reason) {
+                alert('👑 Please enter a detailed reason for the lock.');
+                document.getElementById('sora-lock-reason').focus();
+                return;
+            }
+
+            // Get duration
+            let duration;
+            if (durationSelect.value === 'custom') {
+                duration = parseFloat(customDuration.value);
+                if (!duration || duration < 0.1) {
+                    alert('👑 Please enter a valid custom duration (minimum 0.1 hours).');
+                    customDuration.focus();
+                    return;
+                }
+            } else {
+                duration = parseFloat(durationSelect.value);
+            }
+
+            // Create enhanced reason with category
+            const categoryLabels = {
+                'inappropriate_content': 'Inappropriate Content',
+                'harassment': 'Harassment',
+                'spam': 'Spam/Flooding',
+                'toxic_behavior': 'Toxic Behavior',
+                'rule_violation': 'Rule Violation',
+                'security_concern': 'Security Concern',
+                'custom': 'Custom'
+            };
+
+            const enhancedReason = `[${categoryLabels[category]}] ${reason}`;
+
+            // Special SoraNeko confirmation
+            const confirmMessage = `👑 SoraNeko Admin Action Confirmation
+            
+Target User: ${username}
+Duration: ${duration} hours
+Category: ${categoryLabels[category]}
+Reason: ${reason}
+
+Are you sure you want to execute this lock?`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            // Execute lock with SoraNeko signature
+            const lockResult = await this.lockManager.lockAccount(
+                username,
+                duration,
+                enhancedReason,
+                'SORA_ADMIN',
+                'albertderek6878@gmail.com'
+            );
+
+            // Success notification with special SoraNeko styling
+            const successModal = document.createElement('div');
+            successModal.className = 'modal-overlay';
+            successModal.style.zIndex = '10002';
+            successModal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px; text-align: center;">
+                    <div style="background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0;">
+                        <div style="font-size: 64px; margin-bottom: 15px;">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                        <h2 style="margin: 0;">SoraNeko Admin Action Complete!</h2>
+                    </div>
+                    <div style="padding: 30px;">
+                        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                            <h3 style="color: #0284c7; margin-bottom: 10px;">Lock Executed Successfully</h3>
+                            <p style="margin: 5px 0;"><strong>User:</strong> ${username}</p>
+                            <p style="margin: 5px 0;"><strong>Duration:</strong> ${duration} hours</p>
+                            <p style="margin: 5px 0;"><strong>Category:</strong> ${categoryLabels[category]}</p>
+                        </div>
+                        <button onclick="this.closest('.modal-overlay').remove()" style="
+                            background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+                            color: white;
+                            border: none;
+                            padding: 15px 30px;
+                            border-radius: 8px;
+                            font-size: 16px;
+                            font-weight: 600;
+                            cursor: pointer;
+                        ">
+                            <i class="fas fa-check"></i> Acknowledged
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(successModal);
+
+            // Clear form
+            this.clearSoraNekoForm();
+
+            // Refresh locked accounts list if visible
+            if (document.getElementById('admin-tab-locked-accounts').style.display !== 'none') {
+                this.loadLockedAccountsList();
+            }
+
+            console.log('👑 SoraNeko admin lock executed:', lockResult);
+
+        } catch (error) {
+            console.error('❌ SoraNeko admin lock failed:', error);
+            alert(`👑 Failed to execute lock: ${error.message}`);
+        }
+    }
+
+    // Clear SoraNeko admin form
+    clearSoraNekoForm() {
+        if (!this.isSoraNekoAdmin()) return;
+
+        document.getElementById('sora-lock-username').value = '';
+        document.getElementById('sora-lock-duration').value = '24';
+        document.getElementById('sora-lock-custom-duration').value = '';
+        document.getElementById('sora-lock-custom-duration').style.display = 'none';
+        document.getElementById('sora-lock-category').value = 'inappropriate_content';
+        document.getElementById('sora-lock-reason').value = '';
+    }
+
+    // Quick lock functionality for SoraNeko
+    async quickLock(type, hours) {
+        if (!this.isSoraNekoAdmin()) {
+            console.error('❌ Unauthorized SoraNeko quick lock attempt');
+            return;
+        }
+
+        const username = document.getElementById('sora-lock-username').value.trim();
+        if (!username) {
+            alert('👑 Please enter a username first.');
+            document.getElementById('sora-lock-username').focus();
+            return;
+        }
+
+        const quickLockReasons = {
+            'spam': 'Spam/flooding detected - quick administrative action',
+            'toxic': 'Toxic behavior - immediate intervention required',
+            'warning': 'Warning lock - minor rule violation'
+        };
+
+        const quickLockCategories = {
+            'spam': 'spam',
+            'toxic': 'toxic_behavior',
+            'warning': 'rule_violation'
+        };
+
+        // Set form values
+        document.getElementById('sora-lock-duration').value = hours.toString();
+        document.getElementById('sora-lock-category').value = quickLockCategories[type];
+        document.getElementById('sora-lock-reason').value = quickLockReasons[type];
+
+        // Confirm and execute
+        if (confirm(`👑 Quick Lock: ${username} for ${hours} hours?\nReason: ${quickLockReasons[type]}`)) {
+            await this.executeSoraNekoLock();
         }
     }
 }
