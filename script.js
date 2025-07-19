@@ -701,6 +701,80 @@ function clearNotificationBadge() {
     }
 }
 
+// Set up real-time account lock listener for current user
+function setupAccountLockListener(username) {
+    try {
+        if (!db || isDemoMode) {
+            console.log('⚠️ Firebase not available, skipping account lock listener setup');
+            return;
+        }
+
+        console.log(`👂 Setting up account lock listener for ${username}`);
+
+        // Listen for locks specifically for this user
+        const lockListener = db.collection('account_locks')
+            .where('username', '==', username)
+            .onSnapshot(snapshot => {
+                snapshot.docChanges().forEach(change => {
+                    const lockData = change.doc.data();
+                    
+                    if (change.type === 'added') {
+                        // User just got locked - show immediate notification
+                        console.log(`🚨 Real-time lock detected for ${username}`);
+                        
+                        if (window.stellarChatModeration && window.stellarChatModeration.notificationSystem) {
+                            window.stellarChatModeration.notificationSystem.showLockNotification(
+                                username,
+                                lockData.duration,
+                                lockData.reason,
+                                lockData.violationType || 'unknown'
+                            );
+                        } else {
+                            showNotification(`Your account has been locked for ${lockData.duration} hours. Reason: ${lockData.reason}`, 'error');
+                        }
+                    } else if (change.type === 'removed') {
+                        // User just got unlocked
+                        console.log(`🔓 Real-time unlock detected for ${username}`);
+                        
+                        if (window.stellarChatModeration && window.stellarChatModeration.notificationSystem) {
+                            window.stellarChatModeration.notificationSystem.showUnlockNotification(username);
+                        } else {
+                            showNotification('Your account has been unlocked! You can now send messages again.', 'success');
+                        }
+                    }
+                });
+            }, error => {
+                console.error('❌ Account lock listener error:', error);
+            });
+
+        // Store listener for cleanup
+        if (!window.accountLockListeners) {
+            window.accountLockListeners = [];
+        }
+        window.accountLockListeners.push(lockListener);
+
+    } catch (error) {
+        console.error('❌ Failed to setup account lock listener:', error);
+    }
+}
+
+// Clean up account lock listeners
+function cleanupAccountLockListeners() {
+    try {
+        if (window.accountLockListeners) {
+            window.accountLockListeners.forEach(listener => {
+                if (typeof listener === 'function') {
+                    listener(); // Unsubscribe
+                }
+            });
+            window.accountLockListeners = [];
+            console.log('🧹 Account lock listeners cleaned up');
+        }
+    } catch (error) {
+        console.error('❌ Failed to cleanup account lock listeners:', error);
+    }
+}
+
 // Show notifications panel
 function showNotificationsPanel() {
     try {
@@ -2123,11 +2197,13 @@ function logout() {
 
             auth.signOut().then(() => {
                 currentUser = null;
+                cleanupAccountLockListeners();
                 showNotification('Logged out successfully', 'info');
                 showAuthInterface();
             });
         } else {
             currentUser = null;
+            cleanupAccountLockListeners();
             showNotification('Logged out successfully', 'info');
             showAuthInterface();
         }
@@ -2169,6 +2245,29 @@ async function showMainInterface() {
 
         // Load user's servers
         await loadUserServers();
+
+        // Check if account is locked after successful login and set up real-time monitoring
+        if (window.stellarChatModeration && window.stellarChatModeration.lockManager) {
+            const isLocked = window.stellarChatModeration.lockManager.isAccountLocked(currentUser.username);
+            if (isLocked) {
+                const lockInfo = window.stellarChatModeration.lockManager.getLockInfo(currentUser.username);
+                if (lockInfo) {
+                    console.log(`⚠️ User ${currentUser.username} is locked for ${lockInfo.remainingHours} hours`);
+                    // Show lock notification immediately upon login
+                    if (window.stellarChatModeration.notificationSystem) {
+                        window.stellarChatModeration.notificationSystem.showLockNotification(
+                            currentUser.username, 
+                            lockInfo.duration, 
+                            lockInfo.reason, 
+                            lockInfo.violationType || 'unknown'
+                        );
+                    }
+                }
+            }
+
+            // Set up real-time listener for this user's account locks
+            setupAccountLockListener(currentUser.username);
+        }
 
         showNotification('Connected to StellarChat! 🌟', 'success');
     } catch (error) {
@@ -5211,6 +5310,24 @@ async function sendMessage() {
             return;
         }
 
+        // Check if account is locked before sending message
+        if (window.stellarChatModeration && window.stellarChatModeration.lockManager) {
+            const isLocked = window.stellarChatModeration.lockManager.isAccountLocked(currentUser.username);
+            if (isLocked) {
+                const lockInfo = window.stellarChatModeration.lockManager.getLockInfo(currentUser.username);
+                if (lockInfo) {
+                    // Show blocked message notification
+                    if (window.stellarChatModeration.notificationSystem) {
+                        window.stellarChatModeration.notificationSystem.showMessageBlockedNotification(lockInfo);
+                    } else {
+                        showNotification(`Your account is locked for ${lockInfo.remainingHours} more hours. Reason: ${lockInfo.reason}`, 'error');
+                    }
+                    isSendingMessage = false;
+                    return;
+                }
+            }
+        }
+
         if (currentChatType === 'none') {
             showNotification('Please join a server or start a DM to send messages', 'error');
             return;
@@ -5218,6 +5335,22 @@ async function sendMessage() {
 
         console.log('📤 Sending message:', messageText);
         isSendingMessage = true;
+
+        // AI Moderation - Analyze message before sending
+        if (window.stellarChatModeration && window.stellarChatModeration.messageInterceptor) {
+            try {
+                const moderationResult = await window.stellarChatModeration.messageInterceptor.interceptMessage(messageText, currentUser.username);
+                if (moderationResult && !moderationResult.allowed) {
+                    console.log('🚫 Message blocked by AI moderation:', moderationResult.reason);
+                    showNotification(`Message blocked: ${moderationResult.reason}`, 'error');
+                    isSendingMessage = false;
+                    return;
+                }
+            } catch (moderationError) {
+                console.error('❌ AI moderation error:', moderationError);
+                // Continue sending message if moderation fails (graceful degradation)
+            }
+        }
 
         // Demo mode handling
         if (isDemoMode) {
@@ -5809,6 +5942,19 @@ function handleMessageInput(event) {
 
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
+            
+            // Check if account is locked before attempting to send
+            if (currentUser && window.stellarChatModeration && window.stellarChatModeration.lockManager) {
+                const isLocked = window.stellarChatModeration.lockManager.isAccountLocked(currentUser.username);
+                if (isLocked) {
+                    const lockInfo = window.stellarChatModeration.lockManager.getLockInfo(currentUser.username);
+                    if (lockInfo && window.stellarChatModeration.notificationSystem) {
+                        window.stellarChatModeration.notificationSystem.showMessageBlockedNotification(lockInfo);
+                        return; // Don't send message
+                    }
+                }
+            }
+            
             console.log('📤 Enter pressed, sending message...');
             sendMessage();
         }

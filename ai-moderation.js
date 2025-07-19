@@ -547,17 +547,125 @@ class MessageContentAnalyzer {
     }
 }
 
-// Account Lock Manager - Handles account locking and unlocking
+// Account Lock Manager - Handles account locking and unlocking with Firebase integration
 class AccountLockManager {
     constructor() {
         this.lockedAccounts = new Map();
         this.lockStorageKey = 'stellarchat_locked_accounts';
-        this.loadLockedAccounts();
+        this.firebaseInitialized = false;
+        this.lockListeners = new Map();
+        
+        // Initialize Firebase integration
+        this.initializeFirebase();
         
         // Start cleanup timer for expired locks
         this.startCleanupTimer();
         
-        console.log('🔒 Account Lock Manager initialized');
+        console.log('🔒 Account Lock Manager initialized with Firebase integration');
+    }
+
+    // Initialize Firebase integration for real-time lock synchronization
+    async initializeFirebase() {
+        try {
+            if (typeof firebase !== 'undefined' && firebase.firestore) {
+                this.db = firebase.firestore();
+                this.firebaseInitialized = true;
+                
+                // Load existing locks from Firebase
+                await this.loadLockedAccountsFromFirebase();
+                
+                console.log('🔥 Firebase integration initialized for account locks');
+            } else {
+                console.warn('⚠️ Firebase not available, falling back to localStorage');
+                this.loadLockedAccounts();
+            }
+        } catch (error) {
+            console.error('❌ Failed to initialize Firebase for locks:', error);
+            this.loadLockedAccounts();
+        }
+    }
+
+    // Load locked accounts from Firebase
+    async loadLockedAccountsFromFirebase() {
+        try {
+            const locksSnapshot = await this.db.collection('account_locks').get();
+            
+            locksSnapshot.forEach(doc => {
+                const lockData = doc.data();
+                
+                // Check if lock is still valid
+                if (Date.now() < lockData.expiresAt) {
+                    this.lockedAccounts.set(lockData.username, {
+                        ...lockData,
+                        id: doc.id
+                    });
+                } else {
+                    // Remove expired lock from Firebase
+                    doc.ref.delete();
+                }
+            });
+            
+            console.log(`📂 Loaded ${this.lockedAccounts.size} active locks from Firebase`);
+            
+            // Set up real-time listener for lock changes
+            this.setupLockListener();
+            
+        } catch (error) {
+            console.error('❌ Failed to load locks from Firebase:', error);
+            this.loadLockedAccounts(); // Fallback to localStorage
+        }
+    }
+
+    // Set up real-time listener for lock changes
+    setupLockListener() {
+        if (!this.firebaseInitialized) return;
+        
+        try {
+            this.db.collection('account_locks').onSnapshot(snapshot => {
+                snapshot.docChanges().forEach(change => {
+                    const lockData = change.doc.data();
+                    const docId = change.doc.id;
+                    
+                    if (change.type === 'added' || change.type === 'modified') {
+                        // Check if lock is still valid
+                        if (Date.now() < lockData.expiresAt) {
+                            this.lockedAccounts.set(lockData.username, {
+                                ...lockData,
+                                id: docId
+                            });
+                            
+                            // Show notification if this affects current user
+                            if (change.type === 'added') {
+                                this.handleRealTimeLockNotification(lockData);
+                            }
+                        }
+                    } else if (change.type === 'removed') {
+                        this.lockedAccounts.delete(lockData.username);
+                        
+                        // Show unlock notification if this affects current user
+                        this.handleRealTimeUnlockNotification(lockData);
+                    }
+                });
+            });
+            
+            console.log('👂 Real-time lock listener established');
+        } catch (error) {
+            console.error('❌ Failed to setup lock listener:', error);
+        }
+    }
+
+    // Handle real-time lock notifications
+    handleRealTimeLockNotification(lockData) {
+        if (window.currentUser && window.currentUser.username === lockData.username) {
+            this.showLockNotification(lockData.username, lockData.duration, lockData.reason);
+        }
+    }
+
+    // Handle real-time unlock notifications
+    handleRealTimeUnlockNotification(lockData) {
+        if (window.currentUser && window.currentUser.username === lockData.username) {
+            this.showUnlockNotification(lockData.username);
+        }
     }
 
     // Lock an account with specified duration and reason
@@ -573,13 +681,24 @@ class AccountLockManager {
                 reason,
                 lockedBy,
                 adminEmail,
-                expiresAt,
-                id: this.generateLockId()
+                expiresAt
             };
 
-            // Store lock record
+            // Store in Firebase if available
+            if (this.firebaseInitialized) {
+                try {
+                    const docRef = await this.db.collection('account_locks').add(lockRecord);
+                    lockRecord.id = docRef.id;
+                    console.log(`🔥 Lock saved to Firebase with ID: ${docRef.id}`);
+                } catch (firebaseError) {
+                    console.error('❌ Failed to save lock to Firebase:', firebaseError);
+                    // Continue with local storage as fallback
+                }
+            }
+
+            // Store lock record locally
             this.lockedAccounts.set(username, lockRecord);
-            this.saveLockedAccounts();
+            this.saveLockedAccounts(); // Fallback to localStorage
 
             console.log(`🔒 Account locked: ${username} for ${duration} hours`);
             console.log(`   Reason: ${reason}`);
@@ -610,7 +729,18 @@ class AccountLockManager {
                 return false;
             }
 
-            // Remove lock
+            // Remove from Firebase if available
+            if (this.firebaseInitialized && lockRecord.id) {
+                try {
+                    await this.db.collection('account_locks').doc(lockRecord.id).delete();
+                    console.log(`🔥 Lock removed from Firebase: ${lockRecord.id}`);
+                } catch (firebaseError) {
+                    console.error('❌ Failed to remove lock from Firebase:', firebaseError);
+                    // Continue with local removal as fallback
+                }
+            }
+
+            // Remove lock locally
             this.lockedAccounts.delete(username);
             this.saveLockedAccounts();
 
