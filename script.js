@@ -66,7 +66,7 @@ async function initializeFirebaseSecurely() {
         if (typeof window.firebase !== 'undefined' && config.firebase) {
             console.log("🔄 Firebase SDK found, initializing...");
             firebase = window.firebase;
-            
+
             // Check if Firebase is already initialized
             if (firebase.apps.length === 0) {
                 firebase.initializeApp(config.firebase);
@@ -74,7 +74,7 @@ async function initializeFirebaseSecurely() {
             } else {
                 console.log("ℹ️ Firebase app already initialized");
             }
-            
+
             db = firebase.firestore();
             auth = firebase.auth();
             firebaseReady = true;
@@ -83,9 +83,9 @@ async function initializeFirebaseSecurely() {
         } else {
             isDemoMode = true;
             console.log("🔒 Firebase SDK not available - using secure demo mode");
-            console.log("🔍 Debug info:", { 
+            console.log("🔍 Debug info:", {
                 firebaseExists: typeof window.firebase !== 'undefined',
-                configExists: !!config.firebase 
+                configExists: !!config.firebase
             });
         }
     } catch (error) {
@@ -107,19 +107,19 @@ async function ensureFirebaseReady() {
     if (firebaseReady && firebase && auth) {
         return true;
     }
-    
+
     if (!firebaseInitPromise) {
         firebaseInitPromise = initializeFirebaseSecurely();
     }
-    
+
     await firebaseInitPromise;
-    
+
     // Double check after initialization
     if (firebase && auth && !isDemoMode) {
         firebaseReady = true;
         return true;
     }
-    
+
     return false;
 }
 
@@ -321,7 +321,7 @@ const securityUtils = SecurityUtils;
 const rateLimiter = new RateLimiter();
 
 // Debug function to test Firebase configuration
-window.testFirebaseConfig = async function() {
+window.testFirebaseConfig = async function () {
     console.log('🧪 Testing Firebase configuration...');
     try {
         const config = await getObfuscatedFirebaseConfig();
@@ -403,25 +403,41 @@ function playNotificationSound() {
         if (window.electronAPI && window.electronAPI.playNotificationSound) {
             window.electronAPI.playNotificationSound();
         } else {
-            // Fallback to web audio for browser version
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-            oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
-
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.3);
+            // Use actual notification sound file for web version
+            const audio = new Audio('Notification.mp3');
+            audio.volume = 0.7;
+            audio.play().catch(error => {
+                console.log('Could not play notification sound file, using fallback:', error);
+                // Fallback to web audio if file fails
+                playFallbackNotificationSound();
+            });
         }
     } catch (error) {
         console.log('Could not play notification sound:', error);
+        playFallbackNotificationSound();
+    }
+}
+
+// Fallback notification sound using Web Audio API
+function playFallbackNotificationSound() {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+        console.log('Fallback notification sound failed:', error);
     }
 }
 
@@ -455,49 +471,112 @@ function playDMNotificationSound() {
         if (window.electronAPI && window.electronAPI.playNotificationSound) {
             window.electronAPI.playNotificationSound();
         } else {
-            // Create a more distinctive DM sound
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator1 = audioContext.createOscillator();
-            const oscillator2 = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator1.connect(gainNode);
-            oscillator2.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            // Two-tone notification for DMs
-            oscillator1.frequency.setValueAtTime(600, audioContext.currentTime);
-            oscillator2.frequency.setValueAtTime(800, audioContext.currentTime);
-
-            oscillator1.frequency.setValueAtTime(500, audioContext.currentTime + 0.1);
-            oscillator2.frequency.setValueAtTime(700, audioContext.currentTime + 0.1);
-
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
-
-            oscillator1.start(audioContext.currentTime);
-            oscillator2.start(audioContext.currentTime);
-            oscillator1.stop(audioContext.currentTime + 0.4);
-            oscillator2.stop(audioContext.currentTime + 0.4);
+            // Use actual notification sound file for DMs
+            const audio = new Audio('Notification.mp3');
+            audio.volume = 0.8;
+            audio.play().catch(error => {
+                console.log('Could not play DM notification sound file, using fallback:', error);
+                // Fallback to distinctive two-tone sound
+                playFallbackDMSound();
+            });
         }
     } catch (error) {
         console.log('Could not play DM notification sound:', error);
+        playFallbackDMSound();
+    }
+}
+
+// Fallback DM notification sound
+function playFallbackDMSound() {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator1 = audioContext.createOscillator();
+        const oscillator2 = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator1.connect(gainNode);
+        oscillator2.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        // Two-tone notification for DMs
+        oscillator1.frequency.setValueAtTime(600, audioContext.currentTime);
+        oscillator2.frequency.setValueAtTime(800, audioContext.currentTime);
+
+        oscillator1.frequency.setValueAtTime(500, audioContext.currentTime + 0.1);
+        oscillator2.frequency.setValueAtTime(700, audioContext.currentTime + 0.1);
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+
+        oscillator1.start(audioContext.currentTime);
+        oscillator2.start(audioContext.currentTime);
+        oscillator1.stop(audioContext.currentTime + 0.4);
+        oscillator2.stop(audioContext.currentTime + 0.4);
+    } catch (error) {
+        console.log('Fallback DM sound failed:', error);
+    }
+}
+
+// UI Press sound effect
+function playUIPressSound() {
+    try {
+        const audio = new Audio('PressUI.mp3');
+        audio.volume = 0.5;
+        audio.play().catch(error => {
+            console.log('Could not play UI press sound:', error);
+        });
+    } catch (error) {
+        console.log('Could not play UI press sound:', error);
     }
 }
 
 // Initialize notification system
 function initializeNotificationSystem() {
-    // Request notification permission
+    // Request notification permission immediately for better UX
     if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission().then(permission => {
             console.log('Notification permission:', permission);
+            if (permission === 'granted') {
+                showNotification('🔔 Desktop notifications enabled for DMs!', 'success');
+            }
         });
     }
 
     // Initialize notification badge counter
     window.notificationCount = 0;
 
+    // Add UI sound effects to common buttons
+    addUISoundEffects();
+
     console.log('Notification system initialized');
+}
+
+// Add UI sound effects to buttons
+function addUISoundEffects() {
+    try {
+        // Add click sound to all buttons
+        document.addEventListener('click', function (event) {
+            const target = event.target;
+
+            // Check if clicked element is a button or has button-like classes
+            if (target.tagName === 'BUTTON' ||
+                target.classList.contains('btn') ||
+                target.classList.contains('control-btn') ||
+                target.classList.contains('auth-btn') ||
+                target.classList.contains('nav-tab') ||
+                target.classList.contains('server-item') ||
+                target.classList.contains('friend-item') ||
+                target.classList.contains('dm-item')) {
+
+                // Play UI press sound
+                playUIPressSound();
+            }
+        });
+
+        console.log('UI sound effects added to buttons');
+    } catch (error) {
+        console.log('Could not add UI sound effects:', error);
+    }
 }
 
 // Show desktop notification for DMs
@@ -529,6 +608,79 @@ function showDesktopNotification(title, body, icon = null) {
         }
     } catch (error) {
         console.log('Could not show desktop notification:', error);
+    }
+}
+
+// Enhanced DM notification system - works even when browser is in background
+function showEnhancedDMNotification(title, body, icon = null, senderName = '') {
+    try {
+        // Request notification permission if not already granted
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    showEnhancedDMNotification(title, body, icon, senderName);
+                }
+            });
+            return;
+        }
+
+        // Use Electron system notifications if available
+        if (window.electronAPI && window.electronAPI.showSystemNotification) {
+            window.electronAPI.showSystemNotification(title, body, icon);
+        } else if ('Notification' in window && Notification.permission === 'granted') {
+            // Enhanced notification for DMs with better visibility
+            const notification = new Notification(title, {
+                body: body,
+                icon: icon || '/favicon.ico',
+                badge: '/favicon.ico',
+                tag: `stellarchat-dm-${senderName}`,
+                requireInteraction: true, // Keep notification visible until user interacts
+                silent: false, // Allow system sound
+                timestamp: Date.now(),
+                data: {
+                    sender: senderName,
+                    type: 'dm',
+                    timestamp: Date.now()
+                }
+            });
+
+            // Enhanced click handling
+            notification.onclick = () => {
+                // Focus the window
+                window.focus();
+
+                // Bring browser tab to front if possible
+                if (document.hidden) {
+                    document.addEventListener('visibilitychange', function onVisibilityChange() {
+                        if (!document.hidden) {
+                            document.removeEventListener('visibilitychange', onVisibilityChange);
+                        }
+                    });
+                }
+
+                // Play UI press sound when notification is clicked
+                playUIPressSound();
+
+                // Close notification
+                notification.close();
+
+                console.log(`📱 DM notification clicked - focusing on conversation with ${senderName}`);
+            };
+
+            // Auto close after 10 seconds for DMs (longer than regular notifications)
+            setTimeout(() => {
+                notification.close();
+            }, 10000);
+
+            console.log(`📱 Enhanced DM notification shown for ${senderName}`);
+        } else {
+            // Fallback: show in-app notification if desktop notifications aren't available
+            showNotification(`${title}: ${body}`, 'info');
+        }
+    } catch (error) {
+        console.log('Could not show enhanced DM notification:', error);
+        // Fallback to regular notification
+        showDesktopNotification(title, body, icon);
     }
 }
 
@@ -1411,7 +1563,7 @@ async function clearCustomStatus() {
 async function handleGoogleLogin() {
     try {
         console.log('🔐 Google login attempt started');
-        
+
         // Rate limiting check
         const clientId = 'auth-attempt';
         if (!rateLimiter.isAllowed(clientId)) {
@@ -1422,7 +1574,7 @@ async function handleGoogleLogin() {
         // Ensure Firebase is ready before proceeding
         console.log('🔄 Ensuring Firebase is ready...');
         const firebaseIsReady = await ensureFirebaseReady();
-        
+
         if (!firebaseIsReady || isDemoMode) {
             console.log('🎭 Using demo mode');
             const demoUser = {
@@ -1486,10 +1638,10 @@ async function handleGoogleLogin() {
     } catch (error) {
         console.error('🔒 Authentication error:', error);
         console.error('🔒 Full error details:', error);
-        
+
         // More specific error handling
         let errorMessage = 'An error occurred. Please try again.';
-        
+
         if (error.code) {
             switch (error.code) {
                 case 'auth/popup-closed-by-user':
@@ -1514,7 +1666,7 @@ async function handleGoogleLogin() {
                 errorMessage = 'Session error. Please try again.';
             }
         }
-        
+
         showNotification(errorMessage, 'error');
     }
 }
@@ -2423,15 +2575,17 @@ function loadMessages() {
 
                         // Check if this is a DM conversation
                         if (currentChatType === 'dm') {
+                            // Always play DM notification sound
                             playDMNotificationSound();
 
-                            // Show desktop notification for DMs
-                            showDesktopNotification(
-                                `New message from ${latestMessage.author}`,
+                            // Show enhanced desktop notification for DMs (works even when browser is in background)
+                            showEnhancedDMNotification(
+                                `New DM from ${latestMessage.author}`,
                                 latestMessage.text.length > 50 ?
                                     latestMessage.text.substring(0, 50) + '...' :
                                     latestMessage.text,
-                                latestMessage.photoURL
+                                latestMessage.photoURL,
+                                latestMessage.author
                             );
 
                             // Update notification badge
@@ -2555,7 +2709,7 @@ function displayMessages(messages) {
 function smoothScrollToBottom(container) {
     try {
         if (!container) return;
-        
+
         container.scrollTo({
             top: container.scrollHeight,
             behavior: 'smooth'
@@ -2571,16 +2725,16 @@ function showScrollToBottomButton() {
     try {
         // Remove existing button if present
         hideScrollToBottomButton();
-        
+
         const messagesContainer = document.getElementById('messages-container');
         if (!messagesContainer) return;
-        
+
         const scrollButton = document.createElement('button');
         scrollButton.id = 'scroll-to-bottom-btn';
         scrollButton.className = 'scroll-to-bottom-button';
         scrollButton.innerHTML = '<i class="fas fa-chevron-down"></i>';
         scrollButton.title = 'Scroll to bottom';
-        
+
         scrollButton.style.cssText = `
             position: absolute;
             bottom: 20px;
@@ -2599,7 +2753,7 @@ function showScrollToBottomButton() {
             justify-content: center;
             transition: all 0.3s ease;
         `;
-        
+
         scrollButton.addEventListener('click', () => {
             const messages = document.getElementById('messages');
             if (messages) {
@@ -2607,7 +2761,7 @@ function showScrollToBottomButton() {
                 hideScrollToBottomButton();
             }
         });
-        
+
         messagesContainer.appendChild(scrollButton);
     } catch (error) {
         console.error('Error showing scroll button:', error);
