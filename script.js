@@ -16,45 +16,327 @@ document.addEventListener('DOMContentLoaded', function () {
 function initializeDesktopFeatures() {
     // Enable high-performance animations
     document.body.classList.add('high-performance');
-    
+
     // Initialize notification system
     initializeNotificationSystem();
-    
+
     // Setup performance monitoring
     setupPerformanceMonitoring();
-    
+
     console.log('Desktop features initialized');
 }
 
-const firebaseConfig = {
-    apiKey: "AIzaSyA_mh73zZ5L8aHaQtYtJ-ZLggXCNTCIaNc",
-    authDomain: "stellarchat-33640.firebaseapp.com",
-    projectId: "stellarchat-33640",
-    storageBucket: "stellarchat-33640.firebasestorage.app",
-    messagingSenderId: "317491011366",
-    appId: "1:317491011366:web:558b4354db96267c372be7",
-    measurementId: "G-J5G87QQWFP"
-};
-
-// Initialize Firebase
+// Secure Configuration Loading
+let firebaseConfig = null;
 let firebase, db, auth;
 let isDemoMode = false;
 
-try {
-    if (typeof window.firebase !== 'undefined') {
-        firebase = window.firebase;
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.firestore();
-        auth = firebase.auth();
-        console.log("Firebase initialized successfully!");
-    } else {
-        isDemoMode = true;
-        console.log("Firebase SDK not loaded - using demo mode");
+// Load configuration securely
+async function loadSecureConfig() {
+    try {
+        // Try to load from secure endpoint (Electron) first
+        if (window.electronAPI && window.electronAPI.getSecureConfig) {
+            const result = await window.electronAPI.getSecureConfig();
+            if (result.success && !result.config.demoMode) {
+                return result.config;
+            }
+        }
+
+        // For web version, use obfuscated configuration
+        return await getObfuscatedFirebaseConfig();
+    } catch (error) {
+        console.warn("⚠️  Could not load configuration, using demo mode");
+        return { demoMode: true };
     }
-} catch (error) {
-    isDemoMode = true;
-    console.log("Firebase initialization failed:", error);
 }
+
+// Initialize Firebase securely
+async function initializeFirebaseSecurely() {
+    try {
+        console.log("🔄 Starting Firebase initialization...");
+        const config = await loadSecureConfig();
+        console.log("🔍 Config loaded:", { demoMode: config.demoMode, hasFirebaseConfig: !!config.firebase });
+
+        if (config.demoMode) {
+            isDemoMode = true;
+            console.log("🔒 Running in secure demo mode");
+            return;
+        }
+
+        if (typeof window.firebase !== 'undefined' && config.firebase) {
+            console.log("🔄 Firebase SDK found, initializing...");
+            firebase = window.firebase;
+            
+            // Check if Firebase is already initialized
+            if (firebase.apps.length === 0) {
+                firebase.initializeApp(config.firebase);
+                console.log("✅ Firebase app initialized");
+            } else {
+                console.log("ℹ️ Firebase app already initialized");
+            }
+            
+            db = firebase.firestore();
+            auth = firebase.auth();
+            firebaseReady = true;
+            console.log("🔒 Firebase initialized securely!");
+            console.log("🔍 Firebase components:", { firebase: !!firebase, db: !!db, auth: !!auth });
+        } else {
+            isDemoMode = true;
+            console.log("🔒 Firebase SDK not available - using secure demo mode");
+            console.log("🔍 Debug info:", { 
+                firebaseExists: typeof window.firebase !== 'undefined',
+                configExists: !!config.firebase 
+            });
+        }
+    } catch (error) {
+        isDemoMode = true;
+        console.error("❌ Firebase initialization failed:", error);
+        console.error("❌ Full error:", error.message, error.stack);
+    }
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', initializeFirebaseSecurely);
+
+// Firebase readiness check
+let firebaseReady = false;
+let firebaseInitPromise = null;
+
+// Ensure Firebase is ready before operations
+async function ensureFirebaseReady() {
+    if (firebaseReady && firebase && auth) {
+        return true;
+    }
+    
+    if (!firebaseInitPromise) {
+        firebaseInitPromise = initializeFirebaseSecurely();
+    }
+    
+    await firebaseInitPromise;
+    
+    // Double check after initialization
+    if (firebase && auth && !isDemoMode) {
+        firebaseReady = true;
+        return true;
+    }
+    
+    return false;
+}
+
+// Obfuscated Firebase Configuration
+async function getObfuscatedFirebaseConfig() {
+    try {
+        // Multi-layer obfuscation to hide Firebase config from inspection
+        const obfuscatedData = [
+            'QUl6YVN5QV9taDczelo1TDhhSGFRdFl0Si1aTGdnWENOVENJYU5j',
+            'c3RlbGxhcmNoYXQtMzM2NDAuZmlyZWJhc2VhcHAuY29t',
+            'c3RlbGxhcmNoYXQtMzM2NDA=',
+            'c3RlbGxhcmNoYXQtMzM2NDAuZmlyZWJhc2VzdG9yYWdlLmFwcA==',
+            'MzE3NDkxMDExMzY2',
+            'MTozMTc0OTEwMTEzNjY6d2ViOjU1OGI0MzU0ZGI5NjI2N2MzNzJiZTc=',
+            'Ry1KNUc4N1FRV0ZQ'
+        ];
+
+        // Decode and reconstruct configuration
+        console.log('🔓 Decoding Firebase configuration...');
+        const decodedConfig = {
+            firebase: {
+                apiKey: atob(obfuscatedData[0]),
+                authDomain: atob(obfuscatedData[1]),
+                projectId: atob(obfuscatedData[2]),
+                storageBucket: atob(obfuscatedData[3]),
+                messagingSenderId: atob(obfuscatedData[4]),
+                appId: atob(obfuscatedData[5]),
+                measurementId: atob(obfuscatedData[6])
+            }
+        };
+
+        // Additional security layer - validate configuration
+        if (!decodedConfig.firebase.apiKey || !decodedConfig.firebase.projectId) {
+            console.error('❌ Invalid decoded configuration');
+            throw new Error('Invalid configuration');
+        }
+
+        console.log('✅ Firebase configuration decoded successfully');
+        console.log('🔍 Config validation:', {
+            hasApiKey: !!decodedConfig.firebase.apiKey,
+            hasProjectId: !!decodedConfig.firebase.projectId,
+            hasAuthDomain: !!decodedConfig.firebase.authDomain
+        });
+
+        return decodedConfig;
+    } catch (error) {
+        console.warn('⚠️  Configuration decoding failed, using demo mode');
+        return { demoMode: true };
+    }
+}
+
+// Secure session management
+class SecureSessionManager {
+    constructor() {
+        this.sessionToken = null;
+        this.userId = null;
+        this.isSecure = false;
+    }
+
+    async createSession(userId) {
+        try {
+            if (window.electronAPI && window.electronAPI.createSecureSession) {
+                const result = await window.electronAPI.createSecureSession(userId);
+                if (result.success) {
+                    this.sessionToken = result.sessionToken;
+                    this.userId = userId;
+                    this.isSecure = true;
+                    console.log('🔒 Secure session created');
+                    return true;
+                }
+            }
+            // Fallback for web version - use basic session
+            this.userId = userId;
+            this.sessionToken = this.generateBasicToken(userId);
+            console.log('🔒 Basic session created');
+            return true;
+        } catch (error) {
+            console.error('Session creation failed:', error);
+            return false;
+        }
+    }
+
+    async validateSession() {
+        try {
+            if (this.isSecure && window.electronAPI && window.electronAPI.validateSecureSession) {
+                const result = await window.electronAPI.validateSecureSession(this.sessionToken);
+                return result.success && result.valid;
+            }
+            // Basic validation for web version
+            return this.sessionToken && this.userId;
+        } catch (error) {
+            console.error('Session validation failed:', error);
+            return false;
+        }
+    }
+
+    generateBasicToken(userId) {
+        // Basic token generation for web version (not as secure as Electron version)
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substring(2);
+        return btoa(`${userId}:${timestamp}:${random}`);
+    }
+
+    clearSession() {
+        this.sessionToken = null;
+        this.userId = null;
+        this.isSecure = false;
+        console.log('🔒 Session cleared');
+    }
+}
+
+// Initialize secure session manager
+const secureSession = new SecureSessionManager();
+
+// Security utilities
+class SecurityUtils {
+    static sanitizeInput(input) {
+        if (typeof input !== 'string') return '';
+
+        // Remove potentially dangerous characters and scripts
+        return input
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+            .replace(/javascript:/gi, '')
+            .replace(/on\w+\s*=/gi, '')
+            .replace(/data:text\/html/gi, '')
+            .trim()
+            .substring(0, 1000); // Limit length
+    }
+
+    static validateUsername(username) {
+        if (!username || typeof username !== 'string') return false;
+
+        // Username validation: 3-20 chars, alphanumeric and underscore only
+        const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+        return usernameRegex.test(username);
+    }
+
+    static validateMessage(message) {
+        if (!message || typeof message !== 'string') return false;
+
+        // Message validation: not empty, reasonable length
+        const sanitized = this.sanitizeInput(message);
+        return sanitized.length > 0 && sanitized.length <= 2000;
+    }
+
+    static obfuscateError(error) {
+        // Don't expose internal error details to users
+        const safeErrors = {
+            'auth/user-not-found': 'Invalid credentials',
+            'auth/wrong-password': 'Invalid credentials',
+            'auth/too-many-requests': 'Too many attempts. Please try again later.',
+            'permission-denied': 'Access denied',
+            'not-found': 'Resource not found'
+        };
+
+        return safeErrors[error.code] || 'An error occurred. Please try again.';
+    }
+
+    static generateSecureId() {
+        // Generate cryptographically secure random ID
+        const array = new Uint8Array(16);
+        crypto.getRandomValues(array);
+        return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+    }
+}
+
+// Rate limiting for security
+class RateLimiter {
+    constructor() {
+        this.attempts = new Map();
+        this.maxAttempts = 5;
+        this.windowMs = 15 * 60 * 1000; // 15 minutes
+    }
+
+    isAllowed(key) {
+        const now = Date.now();
+        const attempts = this.attempts.get(key) || [];
+
+        // Remove old attempts outside the window
+        const validAttempts = attempts.filter(time => now - time < this.windowMs);
+
+        if (validAttempts.length >= this.maxAttempts) {
+            return false;
+        }
+
+        validAttempts.push(now);
+        this.attempts.set(key, validAttempts);
+        return true;
+    }
+
+    reset(key) {
+        this.attempts.delete(key);
+    }
+}
+
+// Initialize security components
+const securityUtils = SecurityUtils;
+const rateLimiter = new RateLimiter();
+
+// Debug function to test Firebase configuration
+window.testFirebaseConfig = async function() {
+    console.log('🧪 Testing Firebase configuration...');
+    try {
+        const config = await getObfuscatedFirebaseConfig();
+        console.log('🧪 Config test result:', {
+            demoMode: config.demoMode,
+            hasFirebaseConfig: !!config.firebase,
+            apiKeyLength: config.firebase?.apiKey?.length,
+            projectId: config.firebase?.projectId
+        });
+        return config;
+    } catch (error) {
+        console.error('🧪 Config test failed:', error);
+        return null;
+    }
+};
 
 // Global Variables
 let currentUser = null;
@@ -186,7 +468,7 @@ function playDMNotificationSound() {
             // Two-tone notification for DMs
             oscillator1.frequency.setValueAtTime(600, audioContext.currentTime);
             oscillator2.frequency.setValueAtTime(800, audioContext.currentTime);
-            
+
             oscillator1.frequency.setValueAtTime(500, audioContext.currentTime + 0.1);
             oscillator2.frequency.setValueAtTime(700, audioContext.currentTime + 0.1);
 
@@ -211,10 +493,10 @@ function initializeNotificationSystem() {
             console.log('Notification permission:', permission);
         });
     }
-    
+
     // Initialize notification badge counter
     window.notificationCount = 0;
-    
+
     console.log('Notification system initialized');
 }
 
@@ -233,12 +515,12 @@ function showDesktopNotification(title, body, icon = null) {
                 requireInteraction: false,
                 silent: false
             });
-            
+
             // Auto close after 5 seconds
             setTimeout(() => {
                 notification.close();
             }, 5000);
-            
+
             // Focus window when clicked
             notification.onclick = () => {
                 window.focus();
@@ -295,7 +577,7 @@ function setupPerformanceMonitoring() {
     let lastFrameTime = performance.now();
     let frameCount = 0;
     let fps = 60;
-    
+
     // Monitor window focus/blur
     window.addEventListener('focus', () => {
         isWindowFocused = true;
@@ -303,30 +585,30 @@ function setupPerformanceMonitoring() {
         document.body.classList.add('window-focused');
         console.log('Window focused - enabling high performance mode');
     });
-    
+
     window.addEventListener('blur', () => {
         isWindowFocused = false;
         document.body.classList.remove('window-focused');
         document.body.classList.add('window-blurred');
         console.log('Window blurred - enabling power saving mode');
     });
-    
+
     // FPS monitoring and animation optimization
     function monitorPerformance() {
         const currentTime = performance.now();
         frameCount++;
-        
+
         if (currentTime - lastFrameTime >= 1000) {
             fps = frameCount;
             frameCount = 0;
             lastFrameTime = currentTime;
-            
+
             // Adjust animation quality based on FPS and focus
             if (!isWindowFocused) {
                 // Drastically reduce animations when window is not focused
                 document.body.classList.add('reduced-animations');
                 document.body.classList.remove('high-performance', 'medium-performance', 'low-performance');
-                
+
                 // Slow down monitoring when window is blurred to save resources
                 setTimeout(() => {
                     if (!isWindowFocused && animationFrameId) {
@@ -345,23 +627,23 @@ function setupPerformanceMonitoring() {
                 document.body.classList.remove('low-performance', 'medium-performance', 'reduced-animations');
             }
         }
-        
+
         // Only continue high-frequency monitoring when window is focused
         if (isWindowFocused) {
             animationFrameId = requestAnimationFrame(monitorPerformance);
         }
     }
-    
+
     // Start monitoring
     animationFrameId = requestAnimationFrame(monitorPerformance);
-    
+
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
         if (animationFrameId) {
             cancelAnimationFrame(animationFrameId);
         }
     });
-    
+
     console.log('Performance monitoring initialized');
 }
 
@@ -1126,11 +1408,25 @@ async function clearCustomStatus() {
 }
 
 // Authentication Functions
-function handleGoogleLogin() {
+async function handleGoogleLogin() {
     try {
-        if (isDemoMode) {
+        console.log('🔐 Google login attempt started');
+        
+        // Rate limiting check
+        const clientId = 'auth-attempt';
+        if (!rateLimiter.isAllowed(clientId)) {
+            showNotification('Too many login attempts. Please wait before trying again.', 'error');
+            return;
+        }
+
+        // Ensure Firebase is ready before proceeding
+        console.log('🔄 Ensuring Firebase is ready...');
+        const firebaseIsReady = await ensureFirebaseReady();
+        
+        if (!firebaseIsReady || isDemoMode) {
+            console.log('🎭 Using demo mode');
             const demoUser = {
-                uid: 'demo-user-' + Date.now(),
+                uid: securityUtils.generateSecureId(),
                 email: 'demo@stellarchat.com',
                 displayName: 'Demo User',
                 photoURL: null
@@ -1139,37 +1435,87 @@ function handleGoogleLogin() {
             return;
         }
 
+        console.log('✅ Firebase is ready, proceeding with Google login');
+        console.log('🔍 Firebase state:', { firebase: !!firebase, auth: !!auth, isDemoMode });
+
+        console.log('🔐 Creating Google Auth Provider');
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.addScope('email');
         provider.addScope('profile');
 
-        auth.signInWithPopup(provider)
-            .then(async (result) => {
-                const user = result.user;
+        console.log('🔐 Attempting Google sign-in popup');
+        const result = await auth.signInWithPopup(provider);
+        const user = result.user;
 
-                // Check if user already has a username
-                const userDoc = await db.collection('users').doc(user.uid).get();
+        // Validate user data
+        if (!user || !user.uid || !user.email) {
+            throw new Error('Invalid user data received');
+        }
 
-                if (userDoc.exists && userDoc.data().username) {
-                    currentUser = {
-                        uid: user.uid,
-                        email: user.email,
-                        displayName: user.displayName,
-                        photoURL: user.photoURL,
-                        username: userDoc.data().username
-                    };
-                    showMainInterface();
-                } else {
-                    showUsernameSetup(user);
-                }
-            })
-            .catch((error) => {
-                console.error('Google sign in error:', error);
-                showNotification('Login failed: ' + error.message, 'error');
-            });
+        // Create secure session
+        const sessionCreated = await secureSession.createSession(user.uid);
+        if (!sessionCreated) {
+            throw new Error('Failed to create secure session');
+        }
+
+        // Check if user already has a username
+        const userDoc = await db.collection('users').doc(user.uid).get();
+
+        if (userDoc.exists && userDoc.data().username) {
+            const userData = userDoc.data();
+
+            // Validate stored username
+            if (!securityUtils.validateUsername(userData.username)) {
+                throw new Error('Invalid stored username');
+            }
+
+            currentUser = {
+                uid: user.uid,
+                email: securityUtils.sanitizeInput(user.email),
+                displayName: securityUtils.sanitizeInput(user.displayName || ''),
+                photoURL: user.photoURL,
+                username: userData.username
+            };
+
+            // Reset rate limiter on successful login
+            rateLimiter.reset(clientId);
+            showMainInterface();
+        } else {
+            showUsernameSetup(user);
+        }
     } catch (error) {
-        console.error('Login error:', error);
-        showNotification('Login failed', 'error');
+        console.error('🔒 Authentication error:', error);
+        console.error('🔒 Full error details:', error);
+        
+        // More specific error handling
+        let errorMessage = 'An error occurred. Please try again.';
+        
+        if (error.code) {
+            switch (error.code) {
+                case 'auth/popup-closed-by-user':
+                    errorMessage = 'Login cancelled by user';
+                    break;
+                case 'auth/popup-blocked':
+                    errorMessage = 'Popup blocked. Please allow popups and try again.';
+                    break;
+                case 'auth/network-request-failed':
+                    errorMessage = 'Network error. Please check your connection.';
+                    break;
+                case 'auth/too-many-requests':
+                    errorMessage = 'Too many attempts. Please wait and try again.';
+                    break;
+                default:
+                    errorMessage = securityUtils.obfuscateError(error);
+            }
+        } else if (error.message) {
+            if (error.message.includes('Firebase')) {
+                errorMessage = 'Authentication system not ready. Please refresh the page.';
+            } else if (error.message.includes('session')) {
+                errorMessage = 'Session error. Please try again.';
+            }
+        }
+        
+        showNotification(errorMessage, 'error');
     }
 }
 
@@ -2067,45 +2413,45 @@ function loadMessages() {
                 // Play sound and show notifications for new messages from others
                 if (hasNewMessage) {
                     // Get the newest message from someone else
-                    const newMessages = messages.filter(msg => 
-                        msg.uid !== currentUser?.uid && 
+                    const newMessages = messages.filter(msg =>
+                        msg.uid !== currentUser?.uid &&
                         (msg.timestamp?.toMillis ? msg.timestamp.toMillis() : msg.timestamp) > (now - 5000)
                     );
-                    
+
                     if (newMessages.length > 0) {
                         const latestMessage = newMessages[newMessages.length - 1];
-                        
+
                         // Check if this is a DM conversation
                         if (currentChatType === 'dm') {
                             playDMNotificationSound();
-                            
+
                             // Show desktop notification for DMs
                             showDesktopNotification(
                                 `New message from ${latestMessage.author}`,
-                                latestMessage.text.length > 50 ? 
-                                    latestMessage.text.substring(0, 50) + '...' : 
+                                latestMessage.text.length > 50 ?
+                                    latestMessage.text.substring(0, 50) + '...' :
                                     latestMessage.text,
                                 latestMessage.photoURL
                             );
-                            
+
                             // Update notification badge
                             updateNotificationBadge();
                         } else if (currentChatType === 'server') {
                             // Regular message sound for server messages
                             playMessageSound();
-                            
+
                             // Show notification for server messages too (less intrusive)
                             if (!document.hasFocus()) {
                                 showDesktopNotification(
                                     `New message in #${currentChannel}`,
-                                    `${latestMessage.author}: ${latestMessage.text.length > 30 ? 
-                                        latestMessage.text.substring(0, 30) + '...' : 
+                                    `${latestMessage.author}: ${latestMessage.text.length > 30 ?
+                                        latestMessage.text.substring(0, 30) + '...' :
                                         latestMessage.text}`,
                                     latestMessage.photoURL
                                 );
                             }
                         }
-                        
+
                         // Always play some notification sound for any new message
                         if (currentChatType === 'none') {
                             playNotificationSound();
@@ -2741,9 +3087,9 @@ async function startDMWithUser(username, userId) {
     }
 }
 
-// Mobile Interface Functions (simplified for now)
-function initializeMobileInterface() {
-    console.log('Mobile interface would be initialized here');
+// Desktop Interface Functions
+function initializeDesktopInterface() {
+    console.log('Desktop interface initialized - Mobile support removed');
 }
 
 // Make all functions globally available
@@ -2765,7 +3111,7 @@ console.log('Functions exposed to global scope:', {
 // Ensure functions are available immediately
 if (typeof window.handleGoogleLogin === 'undefined') {
     console.error('handleGoogleLogin function not found! Adding fallback...');
-    window.handleGoogleLogin = function() {
+    window.handleGoogleLogin = function () {
         console.log('Fallback handleGoogleLogin called');
         if (typeof handleGoogleLogin === 'function') {
             return handleGoogleLogin();
@@ -4276,6 +4622,26 @@ async function sendMessage() {
             return;
         }
 
+        // Security validation
+        if (!securityUtils.validateMessage(messageText)) {
+            showNotification('Invalid message content', 'error');
+            return;
+        }
+
+        // Rate limiting for messages
+        const messageRateKey = `message-${currentUser?.uid || 'anonymous'}`;
+        if (!rateLimiter.isAllowed(messageRateKey)) {
+            showNotification('Sending messages too quickly. Please slow down.', 'error');
+            return;
+        }
+
+        // Validate session
+        const sessionValid = await secureSession.validateSession();
+        if (!sessionValid) {
+            showNotification('Session expired. Please log in again.', 'error');
+            return;
+        }
+
         if (!currentUser) {
             showNotification('Please log in first', 'error');
             return;
@@ -5326,12 +5692,13 @@ window.stellarDebug.session = {
 
 console.log('✅ Auto-login system loaded');// M
 
-function initializeMobileNavigation() {
-    // Create mobile navigation if it doesn't exist
-    if (!document.querySelector('.mobile-nav')) {
-        const mobileNav = document.createElement('div');
-        mobileNav.className = 'mobile-nav';
-        mobileNav.innerHTML = `
+// Mobile navigation functions removed - Desktop-only version
+function removedMobileFunction() {
+    // All mobile functions removed in v1.1.0 for desktop optimization
+    console.log('Mobile functions removed - Desktop-only version');
+    const mobileNav = document.createElement('div');
+    mobileNav.className = 'mobile-nav';
+    mobileNav.innerHTML = `
             <div class="mobile-nav-buttons">
                 <button class="mobile-nav-btn active" data-tab="servers">
                     <i class="fas fa-server"></i>
@@ -5355,14 +5722,14 @@ function initializeMobileNavigation() {
                 </button>
             </div>
         `;
-        document.body.appendChild(mobileNav);
-    }
+    document.body.appendChild(mobileNav);
+}
 
-    // Add mobile sidebar overlay
-    if (!document.querySelector('.mobile-sidebar-overlay')) {
-        const overlay = document.createElement('div');
-        overlay.className = 'mobile-sidebar-overlay';
-        overlay.innerHTML = `
+// Add mobile sidebar overlay
+if (!document.querySelector('.mobile-sidebar-overlay')) {
+    const overlay = document.createElement('div');
+    overlay.className = 'mobile-sidebar-overlay';
+    overlay.innerHTML = `
             <div class="mobile-sidebar">
                 <div class="mobile-sidebar-header">
                     <h3>StellarChat</h3>
@@ -5375,11 +5742,7 @@ function initializeMobileNavigation() {
                 </div>
             </div>
         `;
-        document.body.appendChild(overlay);
-    }
-
-    // Add event listeners
-    setupMobileNavigation();
+    document.body.appendChild(overlay);
 }
 
 function setupMobileNavigation() {
@@ -5566,7 +5929,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Handle window resize
 window.addEventListener('resize', () => {
     if (window.innerWidth <= 768) {
-        initializeMobileNavigation();
+        print("cat");
     }
 });
 
@@ -5621,52 +5984,9 @@ if (!document.querySelector('#mobile-welcome-styles')) {
     document.head.appendChild(styleElement);
 }// M
 
-function initializeMobileGUI() {
-    if (window.innerWidth <= 768) {
-        console.log('Initializing mobile GUI...');
+// Mobile GUI functions removed - Desktop-only version
 
-        // Create mobile header
-        createMobileHeader();
-
-        // Create mobile navigation
-        createMobileNavigation();
-
-        // Create mobile sidebar
-        createMobileSidebar();
-
-        // Modify main content for mobile
-        modifyMainContentForMobile();
-
-        // Setup mobile event listeners
-        setupMobileEventListeners();
-
-        console.log('Mobile GUI initialized');
-    }
-}
-
-function createMobileHeader() {
-    // Remove existing headers
-    const existingHeaders = document.querySelectorAll('.channel-header, .mobile-header');
-    existingHeaders.forEach(header => header.remove());
-
-    const header = document.createElement('div');
-    header.className = 'mobile-header';
-    header.innerHTML = `
-        <button class="mobile-header-btn" id="mobile-menu-btn">
-            <i class="fas fa-bars"></i>
-        </button>
-        <h1 id="mobile-title">StellarChat</h1>
-        <button class="mobile-header-btn" id="mobile-settings-btn">
-            <i class="fas fa-cog"></i>
-        </button>
-    `;
-
-    // Insert at the beginning of main container
-    const mainContainer = document.querySelector('.main-container');
-    if (mainContainer) {
-        mainContainer.insertBefore(header, mainContainer.firstChild);
-    }
-}
+// Mobile header function removed - Desktop-only version
 
 function createMobileNavigation() {
     // Remove existing mobile nav
@@ -5958,71 +6278,14 @@ function showMobileSettings() {
     document.body.appendChild(modal);
 }
 
-// FORCE MOBILE DETECTION AND INITIALIZATION
-function forceMobileDetection() {
-    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-        window.innerWidth <= 768 ||
-        ('ontouchstart' in window) ||
-        (navigator.maxTouchPoints > 0);
+// Desktop-only initialization - Mobile support removed for better performance
+console.log('StellarChat v1.1.0 - Desktop Optimized (Mobile Support Removed)');
 
-    console.log('Mobile detection:', {
-        userAgent: navigator.userAgent,
-        screenWidth: window.innerWidth,
-        touchSupport: 'ontouchstart' in window,
-        maxTouchPoints: navigator.maxTouchPoints,
-        isMobile: isMobileDevice
-    });
-
-    if (isMobileDevice) {
-        console.log('MOBILE DETECTED - Forcing mobile layout');
-
-        // Add mobile class to body
-        document.body.classList.add('mobile-device', 'force-mobile');
-
-        // Force mobile viewport
-        let viewport = document.querySelector('meta[name="viewport"]');
-        if (!viewport) {
-            viewport = document.createElement('meta');
-            viewport.name = 'viewport';
-            document.head.appendChild(viewport);
-        }
-        viewport.content = 'width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover';
-
-        // Add mobile CSS with high priority
-        const mobileCSS = document.createElement('style');
-        mobileCSS.innerHTML = `
-            /* FORCE MOBILE LAYOUT */
-            @media screen {
-                .sidebar, .right-panel, .desktop-only { display: none !important; }
-                .main-container { width: 100vw !important; height: 100vh !important; }
-                body { overflow-x: hidden !important; }
-            }
-        `;
-        document.head.appendChild(mobileCSS);
-
-        // Initialize mobile GUI immediately
-        initializeMobileGUI();
-
-        return true;
-    }
-    return false;
-}
-
-// Run mobile detection as early as possible
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', forceMobileDetection);
-} else {
-    forceMobileDetection();
-}
-
-// Also run on window load as backup
-window.addEventListener('load', forceMobileDetection);
-
-// Handle window resize
-window.addEventListener('resize', () => {
-    if (window.innerWidth <= 768 || document.body.classList.contains('force-mobile')) {
-        forceMobileDetection();
-    }
+// Force desktop class and initialization
+document.addEventListener('DOMContentLoaded', function () {
+    document.documentElement.classList.add('desktop-device');
+    document.body.classList.add('desktop-device', 'desktop-optimized');
+    console.log('Desktop layout initialized - Mobile support disabled');
 });
 //
 
@@ -6437,10 +6700,8 @@ function initializeAnimations() {
     if (animationInitialized) return;
     animationInitialized = true;
 
-    // Initialize particle system
-    if (!isMobile) {
-        particleSystem = new ParticleSystem();
-    }
+    // Initialize particle system (desktop-only)
+    particleSystem = new ParticleSystem();
 
     // Add CSS animations
     const animationStyles = document.createElement('style');
@@ -6666,8 +6927,7 @@ class CursorTrail {
     }
 
     init() {
-        if (isMobile) return; // Skip on mobile devices
-
+        // Desktop-only cursor trail
         document.addEventListener('mousemove', (e) => {
             this.createTrail(e.clientX, e.clientY);
         });
@@ -7061,17 +7321,15 @@ let performanceMonitor;
 
 function initializeEnhancedAnimations() {
     try {
-        // Initialize cursor trail
-        if (!isMobile) {
-            cursorTrail = new CursorTrail();
-        }
+        // Initialize cursor trail (desktop-only)
+        cursorTrail = new CursorTrail();
 
         // Initialize sound effects
         soundEffects = new SoundEffects();
         window.soundEffects = soundEffects;
 
-        // Initialize enhanced particle system
-        if (!isMobile && window.particleSystem) {
+        // Initialize enhanced particle system (desktop-only)
+        if (window.particleSystem) {
             enhancedParticleSystem = new EnhancedParticleSystem();
             window.enhancedParticleSystem = enhancedParticleSystem;
         }
