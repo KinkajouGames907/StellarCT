@@ -81,7 +81,7 @@
     <!-- Main Chat Interface -->
     <div id="main-container" class="main-container hidden">
         <!-- Sidebar -->
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="user-info">
                     <div class="user-avatar">
@@ -245,6 +245,18 @@
                 <!-- Members will be populated here -->
             </div>
         </div>
+
+        <!-- Mobile Hamburger Menu (hidden on desktop) -->
+        <button class="sidebar-toggle" id="mobileSidebarToggle" style="display:none;" aria-label="Open menu">
+            <i class="fas fa-bars"></i>
+        </button>
+        <!-- Mobile Bottom Navigation -->
+        <nav class="mobile-nav" id="mobileNav" style="display:none;">
+            <button class="mobile-nav-btn" onclick="showServersTab()"><i class="fas fa-server"></i><span>Servers</span></button>
+            <button class="mobile-nav-btn" onclick="showDMsTab()"><i class="fas fa-comments"></i><span>DMs</span></button>
+            <button class="mobile-nav-btn" onclick="showFriendsTab()"><i class="fas fa-user-friends"></i><span>Friends</span></button>
+            <button class="mobile-nav-btn" onclick="showGroupsTab()"><i class="fas fa-users"></i><span>Groups</span></button>
+        </nav>
     </div>
 
     <!-- Modals -->
@@ -534,5 +546,23 @@
 
     <script src="script.js"></script>
     <script src="ai-moderation.js"></script>
+    <script>
+// Mobile UI logic
+function updateMobileUI() {
+    const isMobile = document.body.classList.contains('mobile');
+    document.getElementById('mobileSidebarToggle').style.display = isMobile ? 'flex' : 'none';
+    document.getElementById('mobileNav').style.display = isMobile ? 'flex' : 'none';
+    if (isMobile) {
+        document.getElementById('sidebar').classList.remove('open');
+    }
+}
+document.addEventListener('DOMContentLoaded', updateMobileUI);
+window.addEventListener('resize', updateMobileUI);
+document.getElementById('mobileSidebarToggle').onclick = function() {
+    document.getElementById('sidebar').classList.toggle('open');
+};
+// Optional: close sidebar when clicking outside or on nav
+// ... existing code ...
+</script>
 </body>
 </html>

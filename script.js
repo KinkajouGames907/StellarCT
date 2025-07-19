@@ -1877,7 +1877,7 @@ function setTheme(theme) {
         document.body.classList.add(`theme-${theme}`);
 
         // Save theme preference
-        localStorage.setItem('theme', theme);
+        localStorage.setItem('stellarchat-theme', theme);
 
         showNotification(`Switched to ${theme} mode`, 'success');
 
@@ -8155,3 +8155,29 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log('Electron: CPU-efficient and reduced animations enabled for smoother performance.');
     }
 });
+
+// Device detection and mobile GUI adaptation
+(function() {
+    function isMobilePhone() {
+        const ua = navigator.userAgent || navigator.vendor || window.opera;
+        // Exclude Chromebooks, PCs, Meta Quest
+        const isChromebook = /CrOS/.test(ua);
+        const isPC = /Windows NT|Macintosh|Linux x86_64|X11/.test(ua);
+        const isMetaQuest = /OculusBrowser|Meta Quest|Quest/.test(ua);
+        // Detect iPhone, Android, Samsung, Apple mobile
+        const isIPhone = /iPhone/.test(ua);
+        const isAndroidPhone = /Android.*Mobile/.test(ua);
+        const isSamsung = /SamsungBrowser|SM-/.test(ua);
+        const isAppleMobile = /iPad|iPod|iPhone/.test(ua);
+        // Only true for phones, not tablets or desktops
+        return (
+            (isIPhone || isAndroidPhone || isSamsung || isAppleMobile) &&
+            !isChromebook && !isPC && !isMetaQuest
+        );
+    }
+    if (isMobilePhone()) {
+        document.body.classList.add('mobile');
+        // Optionally, trigger any JS-based rearrangement here
+        // e.g., window.dispatchEvent(new Event('mobile-ui'));
+    }
+})();
