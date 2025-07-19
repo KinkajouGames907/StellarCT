@@ -10,6 +10,11 @@ const isDesktopApp = true;
 document.addEventListener('DOMContentLoaded', function () {
     document.body.classList.add('desktop-optimized');
     initializeDesktopFeatures();
+
+    const loginOverlay = document.getElementById('fullscreen-login-overlay');
+    if (loginOverlay) {
+        loginOverlay.addEventListener('click', handleGoogleLogin);
+    }
 });
 
 // Desktop-specific initialization
@@ -363,6 +368,12 @@ const rtcConfig = {
 };
 
 // UTILITY FUNCTIONS
+async function showUserProfile(userId) {
+    const modal = document.getElementById('user-profile-modal');
+    await displayUserProfile(userId);
+    modal.style.display = 'flex';
+}
+
 function showNotification(message, type = 'info') {
     try {
         const notification = document.createElement('div');
@@ -1880,9 +1891,9 @@ function setTheme(theme) {
         localStorage.setItem('stellarchat-theme', theme);
 
         showNotification(`Switched to ${theme} mode`, 'success');
-
     } catch (error) {
         console.error('Set theme error:', error);
+        showNotification('Failed to change theme', 'error');
     }
 }
 
@@ -2132,7 +2143,7 @@ async function checkUsernameAvailability() {
 async function completeSetup() {
     try {
         const username = document.getElementById('chosen-username').value.trim();
-        const statusElement = document.getElementById('username-status');
+        const statusElement = document.getElementById('username-change-status');
 
         if (!username || statusElement.classList.contains('taken') || statusElement.classList.contains('checking')) {
             showNotification('Please choose a valid, available username', 'error');
@@ -4103,7 +4114,7 @@ async function updateUsername() {
         }
 
         if (newUsername.length < 3) {
-            statusElement.textContent = 'Too short (min 3 characters)';
+            statusElement.textContent = 'Username must be at least 3 characters';
             statusElement.className = 'username-status taken';
             return;
         }
@@ -5512,10 +5523,103 @@ async function declineFriendRequest(notificationId) {
     }
 }
 
+// Check for unread warnings for the current user and show them
+async function checkAndShowUserWarnings() {
+    try {
+        console.log('🔍 Checking for user warnings...');
+        if (!currentUser || !db) {
+            console.log('❌ No current user or db available');
+            return;
+        }
+        
+        console.log('📝 Querying warnings for user:', currentUser.uid);
+        const warningsSnapshot = await db.collection('users')
+            .doc(currentUser.uid)
+            .collection('warnings')
+            .where('read', '==', false)
+            .get();
+            
+        console.log('🔍 Found warnings:', warningsSnapshot.size);
+        
+        if (!warningsSnapshot.empty) {
+            warningsSnapshot.forEach(async (doc) => {
+                const warning = doc.data();
+                console.log('⚠️ Showing warning:', warning);
+                
+                // Use the notification system to show the warning
+                if (window.stellarChatModeration && 
+                    window.stellarChatModeration.notificationSystem) {
+                    console.log('🔔 Using notification system to show warning');
+                    window.stellarChatModeration.notificationSystem.showWarningNotification(currentUser.username, warning.reason);
+                } else if (window.stellarChatModeration && 
+                          window.stellarChatModeration.lockManager) {
+                    console.log('🔔 Using lock manager to show warning');
+                    window.stellarChatModeration.lockManager.warnUser(currentUser.username, warning.reason);
+                } else {
+                    console.log('🔔 Using fallback alert for warning');
+                    alert(`Warning: ${warning.reason}`);
+                }
+                
+                // Mark as read
+                console.log('📝 Marking warning as read:', doc.id);
+                await db.collection('users')
+                    .doc(currentUser.uid)
+                    .collection('warnings')
+                    .doc(doc.id)
+                    .update({ read: true });
+                console.log('✅ Warning marked as read');
+            });
+        } else {
+            console.log('✅ No unread warnings found');
+        }
+    } catch (err) {
+        console.error('❌ Error checking user warnings:', err);
+    }
+}
+
+// Initialize AI Moderation System
+async function initializeModerationSystem() {
+    try {
+        console.log('🛡️ Initializing AI Moderation System...');
+        
+        // Wait for Firebase to be ready
+        await ensureFirebaseReady();
+        
+        // Wait for the moderation system to be available
+        let attempts = 0;
+        const maxAttempts = 30; // 30 seconds max wait
+        
+        while (!window.stellarChatModeration && attempts < maxAttempts) {
+            console.log(`Waiting for moderation system... (${attempts + 1}/${maxAttempts})`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            attempts++;
+        }
+        
+        if (window.stellarChatModeration) {
+            console.log('✅ AI Moderation System initialized successfully');
+            
+            // Initialize UserReporting with the lock manager
+            if (window.stellarChatModeration.lockManager) {
+                window.userReporting = new window.UserReporting(window.stellarChatModeration.lockManager);
+                console.log('✅ UserReporting system initialized');
+            } else {
+                console.error('❌ Lock manager not available');
+            }
+        } else {
+            console.error('❌ Failed to initialize moderation system after timeout');
+        }
+    } catch (error) {
+        console.error('❌ Error initializing moderation system:', error);
+    }
+}
+
 // Initialize the app with new features
 async function initializeApp() {
     try {
         if (currentUser) {
+            // Initialize moderation system first
+            await initializeModerationSystem();
+            
             // Load all the new features
             await Promise.all([
                 loadFriends(),
@@ -5528,6 +5632,9 @@ async function initializeApp() {
 
             // Update notification badge
             updateNotificationBadge();
+
+            // Check for unread warnings and show them
+            await checkAndShowUserWarnings();
 
             console.log('✅ App initialized with all features');
         }
@@ -8181,3 +8288,221 @@ document.addEventListener('DOMContentLoaded', function () {
         // e.g., window.dispatchEvent(new Event('mobile-ui'));
     }
 })();
+
+// --- User Search/Reporting Panel Logic ---
+function showUserSearchPanel() {
+    const overlay = document.getElementById('user-search-modal-overlay');
+    overlay.classList.remove('hidden');
+    document.getElementById('user-search-input').value = '';
+    document.getElementById('user-search-result').style.display = 'none';
+    document.getElementById('user-search-error').style.display = 'none';
+    // Close on background click
+    overlay.onclick = function(e) {
+        if (e.target === overlay) closeUserSearchPanel();
+    };
+    // Close on ESC
+    document.addEventListener('keydown', userSearchEscHandler);
+}
+
+function closeUserSearchPanel() {
+    const overlay = document.getElementById('user-search-modal-overlay');
+    overlay.classList.add('hidden');
+    overlay.onclick = null;
+    document.removeEventListener('keydown', userSearchEscHandler);
+}
+
+function userSearchEscHandler(e) {
+    if (e.key === 'Escape') closeUserSearchPanel();
+}
+
+window.searchUserByUsername = searchUserByUsername;
+window.showUserSearchPanel = showUserSearchPanel;
+window.closeUserSearchPanel = closeUserSearchPanel;
+
+async function searchUserByUsername() {
+    const username = document.getElementById('user-search-input').value.trim();
+    const resultDiv = document.getElementById('user-search-result');
+    const errorDiv = document.getElementById('user-search-error');
+    if (!username) {
+        errorDiv.textContent = 'Please enter a username.';
+        errorDiv.style.display = 'block';
+        resultDiv.style.display = 'none';
+        return;
+    }
+    errorDiv.style.display = 'none';
+    resultDiv.style.display = 'none';
+    try {
+        await ensureFirebaseReady();
+        const querySnapshot = await db.collection('users').where('username', '==', username).limit(1).get();
+        if (querySnapshot.empty) {
+            errorDiv.textContent = 'User not found.';
+            errorDiv.style.display = 'block';
+            return;
+        }
+        const doc = querySnapshot.docs[0];
+        const userData = doc.data();
+        document.getElementById('search-profile-pfp').src = userData.photoURL || 'default-pfp.png';
+        document.getElementById('search-profile-username').textContent = userData.username || 'N/A';
+        document.getElementById('search-profile-status').textContent = userData.status || 'No status';
+        document.getElementById('search-profile-bio').textContent = userData.bio || 'No bio';
+        document.getElementById('search-profile-joined').textContent = userData.joined ? new Date(userData.joined.seconds * 1000).toLocaleDateString() : 'N/A';
+        // Always re-attach handlers
+        const addFriendBtn = document.getElementById('search-add-friend-btn');
+        const dmBtn = document.getElementById('search-dm-btn');
+        const reportBtn = document.getElementById('search-report-btn');
+        if (addFriendBtn) {
+            addFriendBtn.onclick = function() {
+                console.log('Add Friend button pressed', doc.id, userData.username);
+                window.addFriendById(doc.id, userData.username);
+            };
+        }
+        if (dmBtn) {
+            dmBtn.onclick = function() {
+                console.log('DM button pressed', userData.username, doc.id);
+                window.startDMWithUser(userData.username, doc.id);
+            };
+        }
+        if (reportBtn) {
+            reportBtn.onclick = function() {
+                console.log('Report button pressed', doc.id);
+                window.showReportModal(doc.id);
+            };
+        }
+        resultDiv.style.display = 'block';
+    } catch (err) {
+        errorDiv.textContent = 'Error searching for user.';
+        errorDiv.style.display = 'block';
+        resultDiv.style.display = 'none';
+    }
+}
+
+async function addFriendById(userId, username) {
+    try {
+        console.log('addFriendById called with:', userId, username);
+        console.log('currentUser:', currentUser);
+        console.log('db:', db);
+        
+        if (isDemoMode) {
+            showNotification(`Friend request sent to ${username} (demo mode)`, 'info');
+            return;
+        }
+        
+        if (!currentUser || !currentUser.uid) {
+            showNotification('Please log in first', 'error');
+            return;
+        }
+        
+        if (!currentUser.username) {
+            showNotification('Username not set. Please refresh and try again.', 'error');
+            return;
+        }
+        
+        if (userId === currentUser.uid) {
+            showNotification("You can't add yourself as a friend", 'error');
+            return;
+        }
+        
+        // Check if already friends
+        const friendshipDoc = await db.collection('friendships')
+            .where('users', 'array-contains', currentUser.uid)
+            .get();
+        const alreadyFriends = friendshipDoc.docs.some(doc =>
+            doc.data().users.includes(userId)
+        );
+        if (alreadyFriends) {
+            showNotification('Already friends with this user', 'info');
+            return;
+        }
+        
+        // Check if friend request already sent
+        const existingRequest = await db.collection('notifications')
+            .where('type', '==', 'friend_request')
+            .where('from', '==', currentUser.uid)
+            .where('to', '==', userId)
+            .where('read', '==', false)
+            .get();
+        if (!existingRequest.empty) {
+            showNotification('Friend request already sent', 'info');
+            return;
+        }
+        
+        console.log('Sending friend request notification...');
+        // Send friend request notification
+        const notificationRef = await db.collection('notifications').add({
+            type: 'friend_request',
+            from: currentUser.uid,
+            fromUsername: currentUser.username,
+            to: userId,
+            message: `${currentUser.username} sent you a friend request`,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            read: false
+        });
+        
+        console.log('Friend request notification sent successfully:', notificationRef.id);
+        showNotification(`Friend request sent to ${username}`, 'success');
+        
+        // Refresh notifications for the target user (if they're online)
+        if (window.loadNotifications) {
+            window.loadNotifications();
+        }
+        
+    } catch (error) {
+        console.error('Add friend error:', error);
+        console.error('Error details:', error.message);
+        showNotification(`Failed to send friend request: ${error.message}`, 'error');
+    }
+}
+
+function showReportModal(userId) {
+    const reportModal = document.getElementById('report-modal');
+    if (!reportModal) return;
+    reportModal.style.display = 'flex';
+    window.reportedUserId = userId;
+    document.getElementById('report-reason').value = 'spam';
+    document.getElementById('report-details').value = '';
+    // Attach submit handler
+    const submitBtn = document.getElementById('submit-report-btn');
+    if (submitBtn) {
+        submitBtn.onclick = async function() {
+            const reason = document.getElementById('report-reason').value;
+            const details = document.getElementById('report-details').value;
+            try {
+                console.log('Submitting report for user:', window.reportedUserId, 'by', currentUser.uid, 'reason:', reason, 'details:', details);
+                
+                // Ensure Firebase is ready
+                await ensureFirebaseReady();
+                
+                // Use UserReporting logic
+                if (!window.userReporting) {
+                    if (window.stellarChatModeration && window.stellarChatModeration.lockManager) {
+                        window.userReporting = new window.UserReporting(window.stellarChatModeration.lockManager);
+                    } else {
+                        showNotification('Reporting system not available', 'error');
+                        return;
+                    }
+                }
+                
+                await window.userReporting.handleUserReport(
+                    window.reportedUserId,
+                    currentUser.uid,
+                    reason,
+                    details
+                );
+                
+                console.log('Report submitted successfully');
+                showNotification('Report submitted successfully', 'success');
+                reportModal.style.display = 'none';
+            } catch (err) {
+                console.error('Report submission error:', err);
+                showNotification('Failed to submit report: ' + err.message, 'error');
+            }
+        };
+    }
+}
+
+window.searchUserByUsername = searchUserByUsername;
+window.addFriendById = addFriendById;
+window.showReportModal = showReportModal;
+window.loadNotifications = loadNotifications;
+
+// Remove duplicate function definitions - the proper ones are already defined above

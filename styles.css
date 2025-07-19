@@ -7656,13 +7656,13 @@ rce visibility for debugging */
         backdrop-filter: blur(20px);
         border-top: 1px solid rgba(255, 255, 255, 0.1);
         z-index: 1000;
-        display: flex;
-        align-items: center;
+    display: flex;
+    align-items: center;
         justify-content: center;
-    }
+}
 
     .mobile-nav-buttons {
-        display: flex;
+    display: flex;
         justify-content: space-around;
         width: 100%;
         max-width: 400px;
@@ -7671,7 +7671,7 @@ rce visibility for debugging */
     .mobile-nav-btn {
         display: flex;
         flex-direction: column;
-        align-items: center;
+    align-items: center;
         justify-content: center;
         padding: 8px 12px;
         background: transparent;
@@ -7696,8 +7696,8 @@ rce visibility for debugging */
 
     .mobile-nav-btn span {
         font-size: 0.7rem;
-        font-weight: 500;
-    }
+    font-weight: 500;
+}
 
     /* Mobile sidebar overlay */
     .mobile-sidebar-overlay {
@@ -7736,7 +7736,7 @@ rce visibility for debugging */
     .mobile-sidebar-header {
         padding: 20px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        display: flex;
+    display: flex;
         align-items: center;
         justify-content: space-between;
     }
@@ -7745,12 +7745,12 @@ rce visibility for debugging */
         width: 32px;
         height: 32px;
         background: transparent;
-        border: none;
-        color: #fff;
+    border: none;
+    color: #fff;
         cursor: pointer;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
         justify-content: center;
     }
 
@@ -10053,3 +10053,119 @@ body.mobile .hidden-mobile {
     display: none !important;
 }
 /* End Unified Mobile Layout */
+
+/* User Search Modal Custom Styles */
+#user-search-modal-overlay .modal-content {
+    background: rgba(30, 32, 54, 0.98);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 32px 24px 24px 24px;
+}
+#user-search-modal-overlay .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 18px;
+    padding-bottom: 8px;
+}
+#user-search-modal-overlay h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #a5b4fc;
+    margin: 0;
+}
+#user-search-input {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid #23234a;
+    background: rgba(40, 42, 70, 0.85);
+    color: #fff;
+    font-size: 1rem;
+    margin-bottom: 12px;
+    transition: border 0.2s, box-shadow 0.2s;
+    outline: none;
+}
+#user-search-input:focus {
+    border: 1.5px solid #7c3aed;
+    box-shadow: 0 0 0 2px #7c3aed33;
+    background: rgba(50, 52, 90, 0.95);
+}
+#user-search-modal-overlay button[onclick^="searchUserByUsername"] {
+    width: 100%;
+    padding: 12px 0;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #7c3aed 0%, #6366f1 100%);
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+    border: none;
+    margin-bottom: 18px;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px 0 rgba(124,58,237,0.08);
+}
+#user-search-modal-overlay button[onclick^="searchUserByUsername"]:hover {
+    background: linear-gradient(90deg, #6366f1 0%, #7c3aed 100%);
+}
+#user-search-result {
+    background: rgba(40, 42, 70, 0.85);
+    border-radius: 12px;
+    padding: 18px 14px;
+    margin-top: 8px;
+    box-shadow: 0 2px 8px 0 rgba(31, 38, 135, 0.10);
+}
+#user-search-result .profile-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 10px;
+}
+#user-search-result .profile-header img.pfp {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #6366f1;
+    background: #23234a;
+}
+#user-search-result .profile-header h2 {
+    font-size: 1.1rem;
+    color: #fff;
+    margin: 0;
+}
+#user-search-result .profile-body p {
+    margin: 4px 0;
+    color: #c7d2fe;
+    font-size: 0.98rem;
+}
+#user-search-result .profile-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+}
+#user-search-result .profile-actions button {
+    flex: 1;
+    padding: 8px 0;
+    border-radius: 8px;
+    border: none;
+    font-weight: 500;
+    font-size: 0.98rem;
+    cursor: pointer;
+    background: #23234a;
+    color: #a5b4fc;
+    transition: background 0.2s, color 0.2s;
+}
+#user-search-result .profile-actions button:hover {
+    background: #7c3aed;
+    color: #fff;
+}
+#user-search-result .profile-actions .danger {
+    background: #dc2626;
+    color: #fff;
+}
+#user-search-result .profile-actions .danger:hover {
+    background: #b91c1c;
+}

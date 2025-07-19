@@ -851,6 +851,51 @@ class AccountLockManager {
         }
     }
 
+    warnUser(username, reason) {
+        // Use the notification system to show the warning
+        if (this.notificationSystem) {
+            this.notificationSystem.showWarningNotification(username, reason);
+        } else {
+            // Fallback: create a simple warning modal
+            this.createWarningModal(reason);
+        }
+    }
+
+    // Create warning modal
+    createWarningModal(reason) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'warning-modal';
+        modal.style.zIndex = '10001';
+
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px; text-align: center;">
+                <div class="modal-header" style="background: #f59e0b; color: white;">
+                    <h2><i class="fas fa-exclamation-triangle"></i> Warning</h2>
+                </div>
+                <div class="modal-body" style="padding: 30px;">
+                    <div style="font-size: 48px; color: #f59e0b; margin-bottom: 20px;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h3 style="color: #f59e0b; margin-bottom: 15px;">You have received a warning</h3>
+                    <p style="font-size: 16px; margin-bottom: 25px; padding: 15px; background: rgba(245, 158, 11, 0.1); border-radius: 8px;">
+                        <strong>Reason:</strong> ${reason}
+                    </p>
+                    <p style="color: #666; font-size: 14px; margin-bottom: 20px;">
+                        Please review our community guidelines and ensure your behavior complies with our rules.
+                    </p>
+                    <button onclick="this.closest('.modal-overlay').remove()" 
+                            style="background: #f59e0b; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px;">
+                        I Understand
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        return modal;
+    }
+
     // Create lock notification modal
     createLockModal(duration, reason) {
         const modal = document.createElement('div');
@@ -1495,6 +1540,65 @@ class LockNotificationSystem {
 
         document.body.appendChild(modal);
     }
+
+    showWarningNotification(username, reason) {
+        const modal = this.createWarningModal(reason);
+        document.body.appendChild(modal);
+    }
+
+    createWarningModal(reason) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.zIndex = '10000';
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px; width: 90%;">
+                <div class="modal-header" style="background: #f59e0b; color: white;">
+                    <h2><i class="fas fa-exclamation-triangle"></i> Warning</h2>
+                    <button onclick="this.closest('.modal-overlay').remove()" style="
+                        background: none;
+                        border: none;
+                        color: white;
+                        font-size: 20px;
+                        cursor: pointer;
+                        float: right;
+                    ">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div style="text-align: center; margin: 20px 0;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #f59e0b; margin-bottom: 15px;"></i>
+                        <h3 style="color: #f59e0b; margin-bottom: 15px;">Community Guidelines Violation</h3>
+                        <p style="font-size: 16px; line-height: 1.5; color: #374151;">
+                            ${reason}
+                        </p>
+                        <div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                            <p style="margin: 0; color: #92400e; font-weight: 500;">
+                                <i class="fas fa-info-circle"></i>
+                                Please review our community guidelines and ensure your future messages comply with our standards.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="text-align: center; padding: 15px;">
+                    <button onclick="this.closest('.modal-overlay').remove()" style="
+                        background: #f59e0b;
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 14px;
+                    ">
+                        I Understand
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        return modal;
+    }
 }
 
 // Message Interceptor - Captures and moderates messages before sending
@@ -1765,6 +1869,129 @@ class MessageInterceptor {
     }
 }
 
+class UserReporting {
+    constructor(accountLockManager) {
+        this.lockManager = accountLockManager;
+    }
+
+    async handleUserReport(reportedUserId, reporterUserId, reason, details) {
+        try {
+            console.log('🔍 handleUserReport called with:', { reportedUserId, reporterUserId, reason, details });
+            console.log('🔍 this.lockManager:', this.lockManager);
+            console.log('🔍 window.db:', window.db);
+            console.log('🔍 firebase:', firebase);
+            
+            // Check if Firebase is available
+            if (!window.db && !firebase) {
+                throw new Error('Firebase not available');
+            }
+            
+            const db = window.db || firebase.firestore();
+            console.log('🔍 Using db:', db);
+            
+            // 1. Add the report to a 'reports' collection
+            console.log('📝 Adding report to Firestore...');
+            const reportRef = await db.collection('reports').add({
+                reportedUserId,
+                reporterUserId,
+                reason,
+                details,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log('✅ Report added with ID:', reportRef.id);
+
+            // 2. Check unique reporters and increment the user's report count
+            console.log('📝 Getting user document for:', reportedUserId);
+            const userRef = db.collection('users').doc(reportedUserId);
+            const userDoc = await userRef.get();
+            console.log('🔍 User document exists:', userDoc.exists);
+
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                console.log('🔍 User data:', userData);
+                
+                // Get existing reports for this user to count unique reporters
+                console.log('📝 Getting existing reports for user...');
+                const reportsSnapshot = await db.collection('reports')
+                    .where('reportedUserId', '==', reportedUserId)
+                    .get();
+                
+                const existingReports = reportsSnapshot.docs.map(doc => doc.data());
+                console.log('🔍 Existing reports:', existingReports);
+                
+                // Count unique reporters (including the current one)
+                const uniqueReporters = new Set();
+                uniqueReporters.add(reporterUserId); // Add current reporter
+                existingReports.forEach(report => {
+                    uniqueReporters.add(report.reporterUserId);
+                });
+                
+                const uniqueReporterCount = uniqueReporters.size;
+                console.log('🔍 Unique reporters:', Array.from(uniqueReporters));
+                console.log('🔍 Unique reporter count:', uniqueReporterCount);
+                
+                // Update the user's unique reporter count
+                console.log('📝 Updating user unique reporter count...');
+                await userRef.update({ uniqueReporterCount: uniqueReporterCount });
+                console.log('✅ Unique reporter count updated');
+
+                // 3. Trigger warnings or account lock based on unique reporters
+                if (uniqueReporterCount === 1) {
+                    console.log('⚠️ Issuing first warning...');
+                    // Store warning in Firestore for the reported user
+                    const warningRef = await userRef.collection('warnings').add({
+                        reason: 'You have received a warning for violating community guidelines.',
+                        details: details || '',
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        read: false
+                    });
+                    console.log('✅ Warning stored with ID:', warningRef.id);
+                    console.log('✅ First warning issued and stored for user:', userData.username);
+                    alert('Report submitted. The user has been issued a first warning.');
+                } else if (uniqueReporterCount === 2) {
+                    console.log('⚠️ Issuing second warning...');
+                    const warningRef = await userRef.collection('warnings').add({
+                        reason: 'You have received a second warning. Further violations may result in an account lock.',
+                        details: details || '',
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        read: false
+                    });
+                    console.log('✅ Second warning stored with ID:', warningRef.id);
+                    console.log('✅ Second warning issued and stored for user:', userData.username);
+                    alert('Report submitted. The user has been issued a final warning.');
+                } else if (uniqueReporterCount >= 3) {
+                    console.log('🔒 Locking account due to 3+ unique reporters...');
+                    console.log('🔔 Calling lockManager.lockAccount...');
+                    await this.lockManager.lockAccount(userData.username, 24, 'Your account has been locked due to multiple reports from different users.', 'System');
+                    console.log('✅ Account locked successfully');
+                    alert('Report submitted. The user\'s account has been locked due to multiple reports.');
+                } else {
+                    console.log('📝 Report submitted but no action needed (uniqueReporterCount:', uniqueReporterCount, ')');
+                    alert('Report submitted successfully.');
+                }
+            } else {
+                console.error('❌ User document does not exist for ID:', reportedUserId);
+                throw new Error('User not found');
+            }
+            
+            console.log('✅ handleUserReport completed successfully');
+        } catch (error) {
+            console.error('❌ Error submitting report:', error);
+            console.error('❌ Error stack:', error.stack);
+            console.error('❌ Error details:', {
+                reportedUserId,
+                reporterUserId,
+                reason,
+                details,
+                lockManager: this.lockManager,
+                db: window.db,
+                firebase: firebase
+            });
+            alert('Failed to submit report: ' + error.message);
+        }
+    }
+}
+
 // Admin Interface Manager - Secret admin panel for manual moderation
 class AdminInterfaceManager {
     constructor(lockManager, notificationSystem) {
@@ -1791,15 +2018,17 @@ class AdminInterfaceManager {
 
     // Check if current user has admin privileges
     isAdminUser(userEmail = null) {
-        const emailToCheck = userEmail || (currentUser && currentUser.email);
+        const user = typeof currentUser !== 'undefined' ? currentUser : window.currentUser;
+        const emailToCheck = userEmail || (user && user.email);
         return emailToCheck === this.adminEmail;
     }
 
     // Check if current user is SoraNeko (special admin with enhanced privileges)
     isSoraNekoAdmin() {
-        return currentUser && 
-               currentUser.username === 'SoraNeko' && 
-               currentUser.email === 'albertderek6878@gmail.com';
+        const user = typeof currentUser !== 'undefined' ? currentUser : window.currentUser;
+        return user && 
+               user.username === 'SoraNeko' && 
+               user.email === 'albertderek6878@gmail.com';
     }
 
     // Add secret admin menu button to the interface
@@ -2780,6 +3009,10 @@ class StellarChatModerationSystem {
         this.contentAnalyzer = new MessageContentAnalyzer(this.aiService);
         this.lockManager = new AccountLockManager();
         this.notificationSystem = new LockNotificationSystem(this.lockManager);
+        
+        // Give the lock manager access to the notification system
+        this.lockManager.notificationSystem = this.notificationSystem;
+        
         this.messageInterceptor = new MessageInterceptor(
             this.aiService,
             this.contentAnalyzer,
@@ -4003,3 +4236,7 @@ window.checkModerationHealth = () => moderationTestSuite.quickHealthCheck();
 console.log('🤖 AI Moderation Service loaded successfully');
 console.log('🧪 Test Suite available - Run window.runModerationTests() to test the system');
 console.log('🏥 Health Check available - Run window.checkModerationHealth() for quick status');
+
+// ... existing code ...
+window.UserReporting = UserReporting;
+// ... existing code ...
