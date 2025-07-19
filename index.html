@@ -21,8 +21,16 @@
             <div class="stars"></div>
             <div class="nebula"></div>
         </div>
-        
-        <div class="auth-card">
+        <button id="fullscreen-login-overlay" onclick="handleGoogleLogin()" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:2000;cursor:pointer;background:transparent;border:none;padding:0;margin:0;outline:none;" aria-label="Click anywhere to continue with Google" title="Click anywhere to continue with Google"></button>
+        <div class="auth-card" style="position:relative;z-index:2001;">
+            <div id="login-instruction" style="width:100%;display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:24px;color:#fff;font-size:1.2em;font-weight:bold;text-shadow:0 2px 8px #000;">
+                <span style="display:flex;align-items:center;justify-content:center;width:2em;height:2em;">
+                    <svg width="2em" height="2em" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 28L8 16L20 4" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
+                <span>Click all the way on the left side of the screen to login.</span>
+            </div>
             <div class="auth-header">
                 <h1 class="stellar-logo">
                     <i class="fas fa-star"></i>
@@ -30,18 +38,11 @@
                 </h1>
                 <p class="auth-subtitle">Connect with developers across the stellar drift</p>
             </div>
-            
             <div class="auth-forms">
                 <!-- Google Login Form -->
                 <div id="google-login-form" class="auth-form active">
                     <h2>Welcome to the Galaxy</h2>
                     <p class="auth-description">Sign in with Google to start your stellar journey</p>
-                    
-                    <button class="auth-btn google google-btn" style="width:100%" onclick="handleGoogleLogin()">
-                        <i class="fab fa-google"></i>
-                        <span>Continue with Google</span>
-                    </button>
-                    
                     <div class="auth-divider">
                         <span>Secure • Fast • Easy</span>
                     </div>
@@ -530,8 +531,6 @@
             </div>
         </div>
     </div>
-
-
 
     <script src="script.js"></script>
     <script src="ai-moderation.js"></script>
