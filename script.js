@@ -4723,12 +4723,7 @@ async function sendMessage() {
             return;
         }
 
-        // Rate limiting for messages
-        const messageRateKey = `message-${currentUser?.uid || 'anonymous'}`;
-        if (!rateLimiter.isAllowed(messageRateKey)) {
-            showNotification('Sending messages too quickly. Please slow down.', 'error');
-            return;
-        }
+        // Message rate limiting removed - users can type as fast as they want
 
         // Validate session
         const sessionValid = await secureSession.validateSession();
