@@ -443,22 +443,12 @@ function playFallbackNotificationSound() {
 
 function playMessageSound() {
     try {
-        // Create audio context for message sound
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
-        oscillator.frequency.setValueAtTime(500, audioContext.currentTime + 0.05);
-
-        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.2);
+        // Use actual UI press sound file
+        const audio = new Audio('PressUI.mp3');
+        audio.volume = 0.5;
+        audio.play().catch(error => {
+            console.log('Could not play UI press sound:', error);
+        });
     } catch (error) {
         console.log('Could not play message sound:', error);
     }
@@ -7075,12 +7065,7 @@ function initializeAnimations() {
         }
     });
 
-    // Add hover sound effects
-    document.addEventListener('mouseover', (e) => {
-        if (e.target.matches('.control-btn, .nav-tab, .server-item, .friend-item')) {
-            // Subtle hover sound could be added here
-        }
-    });
+
 
     console.log('🎨 Animation systems initialized!');
 }
@@ -7234,24 +7219,7 @@ class SoundEffects {
         }
     }
 
-    playHoverSound() {
-        if (!this.enabled || !this.audioContext) return;
-
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(this.audioContext.destination);
-
-        oscillator.frequency.setValueAtTime(800, this.audioContext.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(1000, this.audioContext.currentTime + 0.1);
-
-        gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
-
-        oscillator.start(this.audioContext.currentTime);
-        oscillator.stop(this.audioContext.currentTime + 0.1);
-    }
+    // playHoverSound removed - no hover sounds needed
 
     playClickSound() {
         if (!this.enabled || !this.audioContext) return;
@@ -7384,36 +7352,11 @@ class InteractiveEnhancer {
     }
 
     init() {
-        this.addHoverEffects();
         this.addClickEffects();
         this.addFocusEffects();
     }
 
-    addHoverEffects() {
-        // Enhanced hover effects for buttons
-        document.addEventListener('mouseover', (e) => {
-            const element = e.target;
-
-            if (element.matches('.control-btn, .nav-tab, .server-item, .friend-item, .member-item')) {
-                this.addHoverGlow(element);
-                if (window.soundEffects) {
-                    window.soundEffects.playHoverSound();
-                }
-            }
-
-            if (element.matches('.message')) {
-                this.addMessageHover(element);
-            }
-        });
-
-        document.addEventListener('mouseout', (e) => {
-            const element = e.target;
-
-            if (element.matches('.control-btn, .nav-tab, .server-item, .friend-item, .member-item')) {
-                this.removeHoverGlow(element);
-            }
-        });
-    }
+    // addHoverEffects removed - no hover sounds needed
 
     addClickEffects() {
         document.addEventListener('click', (e) => {
