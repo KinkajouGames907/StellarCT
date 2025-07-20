@@ -728,11 +728,11 @@ function setupAccountLockListener(username) {
             .onSnapshot(snapshot => {
                 snapshot.docChanges().forEach(change => {
                     const lockData = change.doc.data();
-                    
+
                     if (change.type === 'added') {
                         // User just got locked - show immediate notification
                         console.log(`🚨 Real-time lock detected for ${username}`);
-                        
+
                         if (window.stellarChatModeration && window.stellarChatModeration.notificationSystem) {
                             window.stellarChatModeration.notificationSystem.showLockNotification(
                                 username,
@@ -746,7 +746,7 @@ function setupAccountLockListener(username) {
                     } else if (change.type === 'removed') {
                         // User just got unlocked
                         console.log(`🔓 Real-time unlock detected for ${username}`);
-                        
+
                         if (window.stellarChatModeration && window.stellarChatModeration.notificationSystem) {
                             window.stellarChatModeration.notificationSystem.showUnlockNotification(username);
                         } else {
@@ -2267,9 +2267,9 @@ async function showMainInterface() {
                     // Show lock notification immediately upon login
                     if (window.stellarChatModeration.notificationSystem) {
                         window.stellarChatModeration.notificationSystem.showLockNotification(
-                            currentUser.username, 
-                            lockInfo.duration, 
-                            lockInfo.reason, 
+                            currentUser.username,
+                            lockInfo.duration,
+                            lockInfo.reason,
                             lockInfo.violationType || 'unknown'
                         );
                     }
@@ -2576,6 +2576,9 @@ function updateServersList() {
             serverElement.dataset.serverId = server.id;
             serverElement.onclick = () => joinServer(server.id);
 
+            // Check if current user owns this server
+            const isOwner = currentUser && server.owner === currentUser.uid;
+
             serverElement.innerHTML = `
                 <div class="server-icon">
                     <i class="fas fa-hashtag"></i>
@@ -2584,9 +2587,16 @@ function updateServersList() {
                     <span class="server-name">${escapeHtml(server.name)}</span>
                     <span class="server-members">${server.members?.length || 0} members</span>
                 </div>
-                <button class="leave-server-btn" onclick="event.stopPropagation(); leaveServer('${server.id}')" title="Leave Server">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
+                <div class="server-actions">
+                    ${isOwner ? `
+                        <button class="server-manage-btn" onclick="event.stopPropagation(); showServerManagement('${server.id}')" title="Manage Server">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                    ` : ''}
+                    <button class="leave-server-btn" onclick="event.stopPropagation(); leaveServer('${server.id}')" title="Leave Server">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
             `;
 
             serversList.appendChild(serverElement);
@@ -3537,6 +3547,212 @@ async function createServer() {
     }
 }
 
+// Server Management Functions
+let currentManagedServerId = null;
+
+function showServerManagement(serverId) {
+    try {
+        currentManagedServerId = serverId;
+        const server = userServers.find(s => s.id === serverId);
+
+        if (!server) {
+            showNotification('Server not found', 'error');
+            return;
+        }
+
+        // Check if user owns this server
+        if (!currentUser || server.owner !== currentUser.uid) {
+            showNotification('You can only manage servers you own', 'error');
+            return;
+        }
+
+        // Populate form with current server data
+        document.getElementById('edit-server-name').value = server.name || '';
+        document.getElementById('edit-server-description').value = server.description || '';
+        document.getElementById('invite-member-username').value = '';
+
+        // Show modal
+        const modalOverlay = document.getElementById('modal-overlay');
+        const serverManagementModal = document.getElementById('server-management-modal');
+
+        if (modalOverlay && serverManagementModal) {
+            modalOverlay.classList.remove('hidden');
+            serverManagementModal.style.display = 'block';
+        }
+
+        playUIPressSound();
+    } catch (error) {
+        console.error('Show server management error:', error);
+        showNotification('Failed to open server management', 'error');
+    }
+}
+
+async function updateServerSettings() {
+    try {
+        if (!currentManagedServerId) {
+            showNotification('No server selected', 'error');
+            return;
+        }
+
+        const serverName = document.getElementById('edit-server-name').value.trim();
+        const serverDescription = document.getElementById('edit-server-description').value.trim();
+
+        if (!serverName) {
+            showNotification('Please enter a server name', 'error');
+            return;
+        }
+
+        if (isDemoMode) {
+            showNotification('Server updated in demo mode!', 'success');
+            closeModal();
+            return;
+        }
+
+        // Update server in database
+        await db.collection('servers').doc(currentManagedServerId).update({
+            name: serverName,
+            description: serverDescription || 'No description provided',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        showNotification('Server settings updated successfully!', 'success');
+
+        // Reload servers to reflect changes
+        await loadUserServers();
+
+        closeModal();
+    } catch (error) {
+        console.error('Update server settings error:', error);
+        showNotification('Failed to update server settings', 'error');
+    }
+}
+
+async function inviteUserToServer() {
+    try {
+        if (!currentManagedServerId) {
+            showNotification('No server selected', 'error');
+            return;
+        }
+
+        const username = document.getElementById('invite-member-username').value.trim();
+
+        if (!username) {
+            showNotification('Please enter a username', 'error');
+            return;
+        }
+
+        if (isDemoMode) {
+            showNotification(`Invite sent to ${username} in demo mode!`, 'success');
+            document.getElementById('invite-member-username').value = '';
+            return;
+        }
+
+        // Find user by username
+        const userQuery = await db.collection('users').where('username', '==', username).get();
+
+        if (userQuery.empty) {
+            showNotification('User not found', 'error');
+            return;
+        }
+
+        const targetUser = userQuery.docs[0];
+        const targetUserId = targetUser.id;
+        const targetUserData = targetUser.data();
+
+        // Check if user is already a member
+        const server = userServers.find(s => s.id === currentManagedServerId);
+        if (server && server.members && server.members.includes(targetUserId)) {
+            showNotification('User is already a member of this server', 'error');
+            return;
+        }
+
+        // Create server invitation
+        await db.collection('server_invitations').add({
+            serverId: currentManagedServerId,
+            serverName: server.name,
+            invitedUserId: targetUserId,
+            invitedUsername: username,
+            inviterUserId: currentUser.uid,
+            inviterUsername: currentUser.displayName || currentUser.email,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            status: 'pending'
+        });
+
+        showNotification(`Invitation sent to ${username}!`, 'success');
+        document.getElementById('invite-member-username').value = '';
+
+    } catch (error) {
+        console.error('Invite user error:', error);
+        showNotification('Failed to send invitation', 'error');
+    }
+}
+
+function confirmDeleteServer() {
+    try {
+        if (!currentManagedServerId) {
+            showNotification('No server selected', 'error');
+            return;
+        }
+
+        const server = userServers.find(s => s.id === currentManagedServerId);
+        if (!server) {
+            showNotification('Server not found', 'error');
+            return;
+        }
+
+        const confirmMessage = `Are you absolutely sure you want to delete "${server.name}"?\n\nThis action cannot be undone. All messages, channels, and data will be permanently lost.\n\nType "DELETE" to confirm:`;
+
+        const confirmation = prompt(confirmMessage);
+
+        if (confirmation === 'DELETE') {
+            deleteServer();
+        } else if (confirmation !== null) {
+            showNotification('Server deletion cancelled - confirmation text did not match', 'info');
+        }
+    } catch (error) {
+        console.error('Confirm delete server error:', error);
+        showNotification('Failed to confirm server deletion', 'error');
+    }
+}
+
+async function deleteServer() {
+    try {
+        if (!currentManagedServerId) {
+            showNotification('No server selected', 'error');
+            return;
+        }
+
+        if (isDemoMode) {
+            showNotification('Server deleted in demo mode!', 'success');
+            closeModal();
+            return;
+        }
+
+        const server = userServers.find(s => s.id === currentManagedServerId);
+
+        // Delete server document
+        await db.collection('servers').doc(currentManagedServerId).delete();
+
+        showNotification(`Server "${server.name}" has been deleted permanently`, 'success');
+
+        // Reload servers and close modal
+        await loadUserServers();
+        closeModal();
+
+        // If we were in this server, switch to no server
+        if (currentServer === currentManagedServerId) {
+            currentServer = null;
+            currentChatType = 'none';
+            updateChannelHeader();
+            clearMessages();
+        }
+
+    } catch (error) {
+        console.error('Delete server error:', error);
+        showNotification('Failed to delete server', 'error');
+    }
+}
+
 // Member Functions
 async function loadServerMembers(serverId) {
     try {
@@ -3808,6 +4024,10 @@ window.joinServerFromBrowser = joinServerFromBrowser;
 window.joinDemoServer = joinDemoServer;
 window.joinServer = joinServer;
 window.leaveServer = leaveServer;
+window.showServerManagement = showServerManagement;
+window.updateServerSettings = updateServerSettings;
+window.inviteUserToServer = inviteUserToServer;
+window.confirmDeleteServer = confirmDeleteServer;
 window.startDMWithUser = startDMWithUser;
 window.loadUserServers = loadUserServers;
 window.toggleMute = toggleMute;
@@ -5531,35 +5751,35 @@ async function checkAndShowUserWarnings() {
             console.log('❌ No current user or db available');
             return;
         }
-        
+
         console.log('📝 Querying warnings for user:', currentUser.uid);
         const warningsSnapshot = await db.collection('users')
             .doc(currentUser.uid)
             .collection('warnings')
             .where('read', '==', false)
             .get();
-            
+
         console.log('🔍 Found warnings:', warningsSnapshot.size);
-        
+
         if (!warningsSnapshot.empty) {
             warningsSnapshot.forEach(async (doc) => {
                 const warning = doc.data();
                 console.log('⚠️ Showing warning:', warning);
-                
+
                 // Use the notification system to show the warning
-                if (window.stellarChatModeration && 
+                if (window.stellarChatModeration &&
                     window.stellarChatModeration.notificationSystem) {
                     console.log('🔔 Using notification system to show warning');
                     window.stellarChatModeration.notificationSystem.showWarningNotification(currentUser.username, warning.reason);
-                } else if (window.stellarChatModeration && 
-                          window.stellarChatModeration.lockManager) {
+                } else if (window.stellarChatModeration &&
+                    window.stellarChatModeration.lockManager) {
                     console.log('🔔 Using lock manager to show warning');
                     window.stellarChatModeration.lockManager.warnUser(currentUser.username, warning.reason);
                 } else {
                     console.log('🔔 Using fallback alert for warning');
                     alert(`Warning: ${warning.reason}`);
                 }
-                
+
                 // Mark as read
                 console.log('📝 Marking warning as read:', doc.id);
                 await db.collection('users')
@@ -5581,23 +5801,23 @@ async function checkAndShowUserWarnings() {
 async function initializeModerationSystem() {
     try {
         console.log('🛡️ Initializing AI Moderation System...');
-        
+
         // Wait for Firebase to be ready
         await ensureFirebaseReady();
-        
+
         // Wait for the moderation system to be available
         let attempts = 0;
         const maxAttempts = 30; // 30 seconds max wait
-        
+
         while (!window.stellarChatModeration && attempts < maxAttempts) {
             console.log(`Waiting for moderation system... (${attempts + 1}/${maxAttempts})`);
             await new Promise(resolve => setTimeout(resolve, 1000));
             attempts++;
         }
-        
+
         if (window.stellarChatModeration) {
             console.log('✅ AI Moderation System initialized successfully');
-            
+
             // Initialize UserReporting with the lock manager
             if (window.stellarChatModeration.lockManager) {
                 window.userReporting = new window.UserReporting(window.stellarChatModeration.lockManager);
@@ -5619,7 +5839,7 @@ async function initializeApp() {
         if (currentUser) {
             // Initialize moderation system first
             await initializeModerationSystem();
-            
+
             // Load all the new features
             await Promise.all([
                 loadFriends(),
@@ -6049,7 +6269,7 @@ function handleMessageInput(event) {
 
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
-            
+
             // Check if account is locked before attempting to send
             if (currentUser && window.stellarChatModeration && window.stellarChatModeration.lockManager) {
                 const isLocked = window.stellarChatModeration.lockManager.isAccountLocked(currentUser.username);
@@ -6061,7 +6281,7 @@ function handleMessageInput(event) {
                     }
                 }
             }
-            
+
             console.log('📤 Enter pressed, sending message...');
             sendMessage();
         }
@@ -8264,7 +8484,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // Device detection and mobile GUI adaptation
-(function() {
+(function () {
     function isMobilePhone() {
         const ua = navigator.userAgent || navigator.vendor || window.opera;
         // Exclude Chromebooks, PCs, Meta Quest
@@ -8297,7 +8517,7 @@ function showUserSearchPanel() {
     document.getElementById('user-search-result').style.display = 'none';
     document.getElementById('user-search-error').style.display = 'none';
     // Close on background click
-    overlay.onclick = function(e) {
+    overlay.onclick = function (e) {
         if (e.target === overlay) closeUserSearchPanel();
     };
     // Close on ESC
@@ -8351,19 +8571,19 @@ async function searchUserByUsername() {
         const dmBtn = document.getElementById('search-dm-btn');
         const reportBtn = document.getElementById('search-report-btn');
         if (addFriendBtn) {
-            addFriendBtn.onclick = function() {
+            addFriendBtn.onclick = function () {
                 console.log('Add Friend button pressed', doc.id, userData.username);
                 window.addFriendById(doc.id, userData.username);
             };
         }
         if (dmBtn) {
-            dmBtn.onclick = function() {
+            dmBtn.onclick = function () {
                 console.log('DM button pressed', userData.username, doc.id);
                 window.startDMWithUser(userData.username, doc.id);
             };
         }
         if (reportBtn) {
-            reportBtn.onclick = function() {
+            reportBtn.onclick = function () {
                 console.log('Report button pressed', doc.id);
                 window.showReportModal(doc.id);
             };
@@ -8381,27 +8601,27 @@ async function addFriendById(userId, username) {
         console.log('addFriendById called with:', userId, username);
         console.log('currentUser:', currentUser);
         console.log('db:', db);
-        
+
         if (isDemoMode) {
             showNotification(`Friend request sent to ${username} (demo mode)`, 'info');
             return;
         }
-        
+
         if (!currentUser || !currentUser.uid) {
             showNotification('Please log in first', 'error');
             return;
         }
-        
+
         if (!currentUser.username) {
             showNotification('Username not set. Please refresh and try again.', 'error');
             return;
         }
-        
+
         if (userId === currentUser.uid) {
             showNotification("You can't add yourself as a friend", 'error');
             return;
         }
-        
+
         // Check if already friends
         const friendshipDoc = await db.collection('friendships')
             .where('users', 'array-contains', currentUser.uid)
@@ -8413,7 +8633,7 @@ async function addFriendById(userId, username) {
             showNotification('Already friends with this user', 'info');
             return;
         }
-        
+
         // Check if friend request already sent
         const existingRequest = await db.collection('notifications')
             .where('type', '==', 'friend_request')
@@ -8425,7 +8645,7 @@ async function addFriendById(userId, username) {
             showNotification('Friend request already sent', 'info');
             return;
         }
-        
+
         console.log('Sending friend request notification...');
         // Send friend request notification
         const notificationRef = await db.collection('notifications').add({
@@ -8437,15 +8657,15 @@ async function addFriendById(userId, username) {
             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
             read: false
         });
-        
+
         console.log('Friend request notification sent successfully:', notificationRef.id);
         showNotification(`Friend request sent to ${username}`, 'success');
-        
+
         // Refresh notifications for the target user (if they're online)
         if (window.loadNotifications) {
             window.loadNotifications();
         }
-        
+
     } catch (error) {
         console.error('Add friend error:', error);
         console.error('Error details:', error.message);
@@ -8463,15 +8683,15 @@ function showReportModal(userId) {
     // Attach submit handler
     const submitBtn = document.getElementById('submit-report-btn');
     if (submitBtn) {
-        submitBtn.onclick = async function() {
+        submitBtn.onclick = async function () {
             const reason = document.getElementById('report-reason').value;
             const details = document.getElementById('report-details').value;
             try {
                 console.log('Submitting report for user:', window.reportedUserId, 'by', currentUser.uid, 'reason:', reason, 'details:', details);
-                
+
                 // Ensure Firebase is ready
                 await ensureFirebaseReady();
-                
+
                 // Use UserReporting logic
                 if (!window.userReporting) {
                     if (window.stellarChatModeration && window.stellarChatModeration.lockManager) {
@@ -8481,14 +8701,14 @@ function showReportModal(userId) {
                         return;
                     }
                 }
-                
+
                 await window.userReporting.handleUserReport(
                     window.reportedUserId,
                     currentUser.uid,
                     reason,
                     details
                 );
-                
+
                 console.log('Report submitted successfully');
                 showNotification('Report submitted successfully', 'success');
                 reportModal.style.display = 'none';

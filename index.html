@@ -528,6 +528,57 @@
             </div>
         </div>
 
+        <!-- Server Management Modal -->
+        <div id="server-management-modal" class="modal">
+            <div class="modal-header">
+                <h3>Server Management</h3>
+                <button class="close-btn" onclick="closeModal()" title="Close Modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div class="server-management-section">
+                    <h4><i class="fas fa-edit"></i> Server Settings</h4>
+                    <div class="input-group">
+                        <label>Server Name</label>
+                        <input type="text" id="edit-server-name" placeholder="Enter server name">
+                    </div>
+                    <div class="input-group">
+                        <label>Server Description</label>
+                        <textarea id="edit-server-description" placeholder="Describe your server"></textarea>
+                    </div>
+                    <button class="modal-btn primary" onclick="updateServerSettings()">
+                        <i class="fas fa-save"></i>
+                        Save Changes
+                    </button>
+                </div>
+
+                <div class="server-management-section">
+                    <h4><i class="fas fa-user-plus"></i> Invite Members</h4>
+                    <div class="input-group">
+                        <label>Invite by Username</label>
+                        <input type="text" id="invite-member-username" placeholder="Enter username to invite">
+                    </div>
+                    <button class="modal-btn secondary" onclick="inviteUserToServer()">
+                        <i class="fas fa-paper-plane"></i>
+                        Send Invite
+                    </button>
+                </div>
+
+                <div class="server-management-section danger-section">
+                    <h4><i class="fas fa-trash"></i> Danger Zone</h4>
+                    <p class="danger-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Deleting your server is permanent and cannot be undone. All messages and data will be lost.
+                    </p>
+                    <button class="modal-btn danger" onclick="confirmDeleteServer()">
+                        <i class="fas fa-trash"></i>
+                        Delete Server
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Admin Panel Modal -->
         <div id="admin-panel-modal" class="modal admin-modal">
             <div class="modal-header">
