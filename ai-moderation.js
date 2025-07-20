@@ -3440,9 +3440,12 @@ const WorkingModerationSystem = {
                 }
             }
             
-            // Show notification to locked user if they're online
+            // Show comprehensive lock notification to locked user if they're online
             if (window.currentUser && window.currentUser.username === username) {
-                if (typeof showNotification === 'function') {
+                // Use the comprehensive notification system
+                if (window.stellarChatModeration && window.stellarChatModeration.notificationSystem) {
+                    window.stellarChatModeration.notificationSystem.showLockNotification(username, duration, reason);
+                } else if (typeof showNotification === 'function') {
                     showNotification(`Your account has been locked for ${duration} hours. Reason: ${reason}`, 'error');
                 }
             }
@@ -3566,29 +3569,195 @@ window.stellarChatModeration = {
     },
     
     notificationSystem: {
-        showLockNotification: (user, duration, reason) => {
+        showLockNotification: (user, duration, reason, violationType = 'violation') => {
             console.log(`🔒 Lock notification: ${user} locked for ${duration}h - ${reason}`);
-            if (typeof showNotification === 'function') {
-                showNotification(`Account locked for ${duration} hours. Reason: ${reason}`, 'error');
+            
+            // Only show to the affected user
+            if (window.currentUser && window.currentUser.username === user) {
+                // Create and show the comprehensive lock modal
+                const modal = window.stellarChatModeration.notificationSystem.createLockModal(duration, reason, violationType);
+                document.body.appendChild(modal);
+                
+                // Play notification sound
+                if (typeof playNotificationSound === 'function') {
+                    playNotificationSound();
+                }
             }
         },
+        
         showUnlockNotification: (user) => {
             console.log(`🔓 Unlock notification: ${user} unlocked`);
-            if (typeof showNotification === 'function') {
-                showNotification('Your account has been unlocked!', 'success');
+            if (window.currentUser && window.currentUser.username === user) {
+                if (typeof showNotification === 'function') {
+                    showNotification('🔓 Your account has been unlocked! You can now send messages again.', 'success');
+                }
             }
         },
+        
         showMessageBlockedNotification: (info) => {
             console.log(`🚫 Message blocked:`, info);
-            if (typeof showNotification === 'function') {
-                showNotification(`Message blocked: ${info.reason}`, 'error');
+            
+            // Show comprehensive blocked message modal
+            const modal = window.stellarChatModeration.notificationSystem.createMessageBlockedModal(info);
+            document.body.appendChild(modal);
+            
+            // Play error sound
+            if (typeof playNotificationSound === 'function') {
+                playNotificationSound();
             }
         },
+        
         showWarningNotification: (user, reason) => {
             console.log(`⚠️ Warning: ${user} - ${reason}`);
-            if (typeof showNotification === 'function') {
-                showNotification(`Warning: ${reason}`, 'warning');
+            
+            // Only show to the affected user
+            if (window.currentUser && window.currentUser.username === user) {
+                // Create and show warning modal
+                const modal = window.stellarChatModeration.notificationSystem.createWarningModal(reason);
+                document.body.appendChild(modal);
+                
+                // Play warning sound
+                if (typeof playNotificationSound === 'function') {
+                    playNotificationSound();
+                }
             }
+        },
+        
+        // Create comprehensive lock modal with community guidelines
+        createLockModal: (duration, reason, violationType) => {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.id = 'account-lock-modal';
+            modal.style.zIndex = '10001';
+            modal.style.background = 'rgba(0, 0, 0, 0.8)';
+
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 600px; text-align: center; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid #ef4444; border-radius: 16px;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 20px; border-radius: 14px 14px 0 0;">
+                        <h2 style="margin: 0; font-size: 24px;"><i class="fas fa-lock"></i> Account Locked</h2>
+                    </div>
+                    <div class="modal-body" style="padding: 30px; color: white;">
+                        <div style="font-size: 64px; color: #ef4444; margin-bottom: 20px; animation: pulse 2s infinite;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h3 style="color: #ef4444; margin-bottom: 15px; font-size: 20px;">Your account has been locked</h3>
+                        
+                        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                            <p style="font-size: 18px; margin-bottom: 10px; color: #fff;">
+                                <strong><i class="fas fa-clock"></i> Duration:</strong> ${duration} hours
+                            </p>
+                            <p style="font-size: 16px; margin-bottom: 0; color: #fff;">
+                                <strong><i class="fas fa-info-circle"></i> Reason:</strong> ${reason}
+                            </p>
+                        </div>
+                        
+                        <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 20px; margin: 20px 0; text-align: left;">
+                            <h4 style="color: #fbbf24; margin-bottom: 15px; text-align: center;"><i class="fas fa-scroll"></i> Community Guidelines Reminder</h4>
+                            <ul style="color: rgba(255, 255, 255, 0.9); line-height: 1.6; padding-left: 20px;">
+                                <li>Be respectful and kind to all community members</li>
+                                <li>No harassment, hate speech, or discriminatory language</li>
+                                <li>No spam, excessive caps, or disruptive behavior</li>
+                                <li>Keep conversations appropriate and family-friendly</li>
+                                <li>Respect others' privacy and personal information</li>
+                                <li>Follow server-specific rules and guidelines</li>
+                            </ul>
+                        </div>
+                        
+                        <p style="color: rgba(255, 255, 255, 0.8); font-size: 14px; margin: 20px 0; font-style: italic;">
+                            <i class="fas fa-ban"></i> You will not be able to send messages until the lock expires.
+                        </p>
+                        
+                        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 25px;">
+                            <button onclick="this.closest('.modal-overlay').remove()" 
+                                    style="background: #ef4444; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600;">
+                                <i class="fas fa-check"></i> I Understand
+                            </button>
+                            <button onclick="window.stellarChatModeration.showCommunityGuidelines()" 
+                                    style="background: #6b7280; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px;">
+                                <i class="fas fa-book"></i> View Guidelines
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return modal;
+        },
+        
+        // Create message blocked modal
+        createMessageBlockedModal: (lockInfo) => {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.id = 'message-blocked-modal';
+            modal.style.zIndex = '10001';
+            modal.style.background = 'rgba(0, 0, 0, 0.8)';
+
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px; text-align: center; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid #f59e0b; border-radius: 16px;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 20px; border-radius: 14px 14px 0 0;">
+                        <h2 style="margin: 0; font-size: 20px;"><i class="fas fa-ban"></i> Message Blocked</h2>
+                    </div>
+                    <div class="modal-body" style="padding: 25px; color: white;">
+                        <div style="font-size: 48px; color: #f59e0b; margin-bottom: 15px;">
+                            <i class="fas fa-comment-slash"></i>
+                        </div>
+                        <h3 style="color: #f59e0b; margin-bottom: 15px;">Cannot send message</h3>
+                        <p style="font-size: 16px; margin-bottom: 20px; color: rgba(255, 255, 255, 0.9);">
+                            Your account is currently locked for <strong>${lockInfo.remainingHours} more hours</strong>
+                        </p>
+                        <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 15px 0;">
+                            <p style="margin: 0; color: #fff;"><strong>Reason:</strong> ${lockInfo.reason}</p>
+                        </div>
+                        <button onclick="this.closest('.modal-overlay').remove()" 
+                                style="background: #f59e0b; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; margin-top: 15px;">
+                            <i class="fas fa-check"></i> Understood
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            return modal;
+        },
+        
+        // Create warning modal
+        createWarningModal: (reason) => {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.id = 'warning-modal';
+            modal.style.zIndex = '10001';
+            modal.style.background = 'rgba(0, 0, 0, 0.8)';
+
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px; text-align: center; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid #f59e0b; border-radius: 16px;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 20px; border-radius: 14px 14px 0 0;">
+                        <h2 style="margin: 0; font-size: 20px;"><i class="fas fa-exclamation-triangle"></i> Warning</h2>
+                    </div>
+                    <div class="modal-body" style="padding: 25px; color: white;">
+                        <div style="font-size: 48px; color: #f59e0b; margin-bottom: 15px;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h3 style="color: #f59e0b; margin-bottom: 15px;">You have received a warning</h3>
+                        <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 15px 0;">
+                            <p style="margin: 0; color: #fff;"><strong>Reason:</strong> ${reason}</p>
+                        </div>
+                        <p style="color: rgba(255, 255, 255, 0.8); font-size: 14px; margin: 15px 0;">
+                            Please review our community guidelines and ensure your behavior complies with our rules.
+                        </p>
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                            <button onclick="this.closest('.modal-overlay').remove()" 
+                                    style="background: #f59e0b; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px;">
+                                <i class="fas fa-check"></i> I Understand
+                            </button>
+                            <button onclick="window.stellarChatModeration.showCommunityGuidelines()" 
+                                    style="background: #6b7280; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px;">
+                                <i class="fas fa-book"></i> Guidelines
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return modal;
         }
     },
     
@@ -3597,13 +3766,254 @@ window.stellarChatModeration = {
         initializeAdminInterface: () => console.log('🔧 Admin interface initialized')
     },
     
+    // Show community guidelines modal
+    showCommunityGuidelines: () => {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'community-guidelines-modal';
+        modal.style.zIndex = '10002';
+        modal.style.background = 'rgba(0, 0, 0, 0.9)';
+
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 700px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid #667eea; border-radius: 16px;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 25px; border-radius: 14px 14px 0 0;">
+                    <h2 style="margin: 0; font-size: 24px; text-align: center;"><i class="fas fa-scroll"></i> StellarChat Community Guidelines</h2>
+                </div>
+                <div class="modal-body" style="padding: 30px; color: white; max-height: 70vh; overflow-y: auto;">
+                    <div style="text-align: center; margin-bottom: 25px;">
+                        <div style="font-size: 48px; color: #667eea; margin-bottom: 15px;">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <p style="font-size: 18px; color: rgba(255, 255, 255, 0.9); margin: 0;">
+                            Welcome to our stellar community! Please follow these guidelines to ensure a positive experience for everyone.
+                        </p>
+                    </div>
+                    
+                    <div style="display: grid; gap: 20px;">
+                        <div style="background: rgba(102, 126, 234, 0.1); border-left: 4px solid #667eea; padding: 20px; border-radius: 8px;">
+                            <h3 style="color: #667eea; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-heart"></i> Be Respectful & Kind
+                            </h3>
+                            <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
+                                <li>Treat all community members with respect and kindness</li>
+                                <li>Be welcoming to new members and help them feel included</li>
+                                <li>Disagree respectfully and constructively</li>
+                                <li>Use appropriate language and tone in all interactions</li>
+                            </ul>
+                        </div>
+                        
+                        <div style="background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; padding: 20px; border-radius: 8px;">
+                            <h3 style="color: #ef4444; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-ban"></i> Prohibited Content
+                            </h3>
+                            <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
+                                <li><strong>No harassment, hate speech, or discriminatory language</strong></li>
+                                <li><strong>No sexual content or explicit language</strong></li>
+                                <li><strong>No predatory behavior or inappropriate contact</strong></li>
+                                <li><strong>No spam, excessive caps, or disruptive behavior</strong></li>
+                                <li><strong>No sharing of personal information without consent</strong></li>
+                            </ul>
+                        </div>
+                        
+                        <div style="background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px;">
+                            <h3 style="color: #f59e0b; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-shield-alt"></i> Safety & Privacy
+                            </h3>
+                            <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
+                                <li>Keep conversations appropriate and family-friendly</li>
+                                <li>Respect others' privacy and personal boundaries</li>
+                                <li>Report inappropriate behavior to moderators</li>
+                                <li>Don't share personal information publicly</li>
+                            </ul>
+                        </div>
+                        
+                        <div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 20px; border-radius: 8px;">
+                            <h3 style="color: #10b981; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-comments"></i> Communication Guidelines
+                            </h3>
+                            <ul style="margin: 0; padding-left: 20px; line-height: 1.6;">
+                                <li>Stay on topic in relevant channels</li>
+                                <li>Use clear and concise language</li>
+                                <li>Avoid excessive use of emojis or special characters</li>
+                                <li>Follow server-specific rules and guidelines</li>
+                            </ul>
+                        </div>
+                        
+                        <div style="background: rgba(139, 92, 246, 0.1); border-left: 4px solid #8b5cf6; padding: 20px; border-radius: 8px;">
+                            <h3 style="color: #8b5cf6; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-gavel"></i> Consequences
+                            </h3>
+                            <p style="margin: 0; line-height: 1.6;">
+                                Violations of these guidelines may result in warnings, temporary account locks, or permanent bans depending on the severity. 
+                                Our AI moderation system actively monitors content to ensure a safe environment for all users.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px; padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 12px;">
+                        <p style="margin: 0; font-size: 16px; color: rgba(255, 255, 255, 0.9);">
+                            <i class="fas fa-star"></i> Thank you for helping us maintain a stellar community! <i class="fas fa-star"></i>
+                        </p>
+                    </div>
+                </div>
+                <div style="padding: 20px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                    <button onclick="this.closest('.modal-overlay').remove()" 
+                            style="background: linear-gradient(45deg, #667eea, #764ba2); color: white; border: none; padding: 15px 30px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600;">
+                        <i class="fas fa-check"></i> I Understand
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    },
+    
     getSystemStatus: () => ({ initialized: true, status: 'active' })
 };
 
 // Initialize the working system
 WorkingModerationSystem.init();
 
+// Add test functions for debugging
+window.testAccountLocking = {
+    // Test locking current user
+    lockCurrentUser: (hours = 1, reason = 'Test lock') => {
+        if (window.currentUser && window.currentUser.username) {
+            console.log(`🧪 Testing lock for ${window.currentUser.username}`);
+            return WorkingModerationSystem.lockAccount(window.currentUser.username, hours, reason, 'Test');
+        } else {
+            console.log('❌ No current user to lock');
+        }
+    },
+    
+    // Test unlocking current user
+    unlockCurrentUser: () => {
+        if (window.currentUser && window.currentUser.username) {
+            console.log(`🧪 Testing unlock for ${window.currentUser.username}`);
+            return WorkingModerationSystem.unlockAccount(window.currentUser.username, 'Test unlock');
+        } else {
+            console.log('❌ No current user to unlock');
+        }
+    },
+    
+    // Check if current user is locked
+    checkCurrentUser: () => {
+        if (window.currentUser && window.currentUser.username) {
+            const isLocked = WorkingModerationSystem.isAccountLocked(window.currentUser.username);
+            const lockInfo = WorkingModerationSystem.getLockInfo(window.currentUser.username);
+            console.log(`🧪 User ${window.currentUser.username} locked:`, isLocked);
+            if (lockInfo) {
+                console.log('🧪 Lock info:', lockInfo);
+            }
+            return { isLocked, lockInfo };
+        } else {
+            console.log('❌ No current user to check');
+        }
+    },
+    
+    // Show test lock notification
+    showTestLockNotification: () => {
+        if (window.stellarChatModeration && window.stellarChatModeration.notificationSystem) {
+            window.stellarChatModeration.notificationSystem.showLockNotification('TestUser', 2, 'Test violation for demonstration');
+        }
+    },
+    
+    // Show test community guidelines
+    showGuidelines: () => {
+        if (window.stellarChatModeration && window.stellarChatModeration.showCommunityGuidelines) {
+            window.stellarChatModeration.showCommunityGuidelines();
+        }
+    }
+};
+
+// Add admin test interface
+window.adminTest = {
+    // Quick admin panel for testing
+    showAdminPanel: () => {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'admin-test-panel';
+        modal.style.zIndex = '10003';
+        modal.style.background = 'rgba(0, 0, 0, 0.9)';
+
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 600px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 2px solid #dc2626; border-radius: 16px;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; padding: 20px; border-radius: 14px 14px 0 0;">
+                    <h2 style="margin: 0; font-size: 20px; text-align: center;"><i class="fas fa-tools"></i> Admin Test Panel</h2>
+                </div>
+                <div class="modal-body" style="padding: 25px; color: white;">
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="color: #dc2626; margin-bottom: 15px;"><i class="fas fa-lock"></i> Account Locking Tests</h3>
+                        <div style="display: grid; gap: 10px;">
+                            <button onclick="window.testAccountLocking.lockCurrentUser(1, 'Test lock - 1 hour')" 
+                                    style="background: #f59e0b; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer;">
+                                🔒 Lock Current User (1 hour)
+                            </button>
+                            <button onclick="window.testAccountLocking.lockCurrentUser(24, 'Test lock - 24 hours')" 
+                                    style="background: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer;">
+                                🔒 Lock Current User (24 hours)
+                            </button>
+                            <button onclick="window.testAccountLocking.unlockCurrentUser()" 
+                                    style="background: #10b981; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer;">
+                                🔓 Unlock Current User
+                            </button>
+                            <button onclick="window.testAccountLocking.checkCurrentUser()" 
+                                    style="background: #6366f1; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer;">
+                                🔍 Check Lock Status
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="color: #dc2626; margin-bottom: 15px;"><i class="fas fa-bell"></i> Notification Tests</h3>
+                        <div style="display: grid; gap: 10px;">
+                            <button onclick="window.testAccountLocking.showTestLockNotification()" 
+                                    style="background: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer;">
+                                🚨 Show Lock Notification
+                            </button>
+                            <button onclick="window.testAccountLocking.showGuidelines()" 
+                                    style="background: #8b5cf6; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer;">
+                                📜 Show Community Guidelines
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 15px; margin: 15px 0;">
+                        <h4 style="color: #fbbf24; margin-bottom: 10px;"><i class="fas fa-info-circle"></i> Instructions</h4>
+                        <ul style="margin: 0; padding-left: 20px; line-height: 1.6; font-size: 14px;">
+                            <li>Lock your account to test the blocking system</li>
+                            <li>Try sending a message while locked</li>
+                            <li>Check the console for detailed logs</li>
+                            <li>Unlock when done testing</li>
+                        </ul>
+                    </div>
+                </div>
+                <div style="padding: 15px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                    <button onclick="this.closest('.modal-overlay').remove()" 
+                            style="background: #6b7280; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px;">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    }
+};
+
 console.log('🛡️ StellarChat AI Moderation System is now active!');
+console.log('🧪 Test functions available:');
+console.log('   - window.testAccountLocking (basic tests)');
+console.log('   - window.adminTest.showAdminPanel() (visual admin panel)');
+console.log('🔧 Press Ctrl+Shift+A to open admin test panel');
+
+// Add keyboard shortcut for admin panel
+document.addEventListener('keydown', (event) => {
+    if (event.ctrlKey && event.shiftKey && event.key === 'A') {
+        event.preventDefault();
+        window.adminTest.showAdminPanel();
+    }
+});
 
 // Enhanced Error Handling and Logging System
 class ModerationErrorHandler {
